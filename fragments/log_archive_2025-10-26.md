@@ -1,0 +1,136 @@
+- ❓ Unknown format skipped: ../../emotional_logs/ache_architect.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/Oslo Positioning Plan - AI-n_Native Transition/Oslo_Positioning_Plan_—_AI-Native_Transition.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/decompression/Decompression_Ritual_Options.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/oslo_strategy/Lagos_Opportunities.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/phoenix_portfolio/detective.sh_concept.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/phoenix_portfolio/emotional_budget_tracker_code_placeholder.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/phoenix_portfolio/Idea_Repository_-_Rituals_and_Sacred_Tasks.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/phoenix_portfolio/parser/log.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/phoenix_portfolio/scripts/launcher/README.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/phoenix_portfolio/scripts/README.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/phoenix_portfolio/window_of_wonder.md.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/phoenix_portfolio/Phoenix_Portfoli_Ritual_-_October_Launch.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/code_fragments/main.py_-_emotional_budget_tracker_(draft).md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/README.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/index.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/entries/2025-08-24-17-54-EDT.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/entries/2025-08-24-runner-lightning.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/entries/2025-08-31-evening-release.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/entries/2025-09-02-signal-mapped.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/entries/2025-09-06-18-24.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/entries/2025-09-03-false_signal.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/entries/2025-08-27-Cabin Dream: Bruce, the Call, and the Trailer That Waits.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/README.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/pulses/2025-09-09-1717-Exit Mapped, Craving Redirected, Presence Held.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/pulses/2025-08-24-1640-yaz shimmer, late afternoon.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/budget/2025-09-02-Clothing purchase for emotional recalibration.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/budget/2025-09-02-Upwork Profile launch.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/training_strategy/emotional_budget_tracker_schema_sketch.md.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/rituals/archive/README.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/rituals/README.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/rituals/.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/emotional_logs/ache_architect.md
+- ❓ Unknown format skipped: /Users/shonheersink/memoir/fragments/ache_architect.md
+- ❓ Unknown format skipped: /Users/shonheersink/frisson_journal/entries/.md
+- ❓ Unknown format skipped: /Users/shonheersink/frisson_journal/outreach/2025-09-02-Upwork Profile.md
+- ❓ Unknown format skipped: /Users/shonheersink/git_repos/active/emotional_budget_tracker/README.md
+- ❓ Unknown format skipped: /Users/shonheersink/git_repos/active/emotional_budget_tracker/rituals/README.md
+- ⏳ Tracker format deferred: /Users/shonheersink/Documents/emotional_tracker/emotional_tracker.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/Oslo Positioning Plan - AI-n_Native Transition/Oslo_Positioning_Plan_—_AI-Native_Transition.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/decompression/Decompression_Ritual_Options.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/oslo_strategy/Lagos_Opportunities.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/phoenix_portfolio/detective.sh_concept.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/phoenix_portfolio/emotional_budget_tracker_code_placeholder.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/phoenix_portfolio/Idea_Repository_-_Rituals_and_Sacred_Tasks.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/phoenix_portfolio/parser/log.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/phoenix_portfolio/scripts/launcher/README.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/phoenix_portfolio/scripts/README.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/phoenix_portfolio/window_of_wonder.md.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/phoenix_portfolio/Phoenix_Portfoli_Ritual_-_October_Launch.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/code_fragments/main.py_-_emotional_budget_tracker_(draft).md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/README.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/index.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/entries/2025-08-24-17-54-EDT.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/entries/2025-08-24-runner-lightning.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/entries/2025-08-31-evening-release.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/entries/2025-09-02-signal-mapped.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/entries/2025-09-06-18-24.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/entries/2025-09-03-false_signal.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/entries/2025-08-27-Cabin Dream: Bruce, the Call, and the Trailer That Waits.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/README.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/pulses/2025-09-09-1717-Exit Mapped, Craving Redirected, Presence Held.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/pulses/2025-08-24-1640-yaz shimmer, late afternoon.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/budget/2025-09-02-Clothing purchase for emotional recalibration.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/budget/2025-09-02-Upwork Profile launch.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/training_strategy/emotional_budget_tracker_schema_sketch.md.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/rituals/archive/README.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/rituals/README.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/rituals/.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/emotional_logs/ache_architect.md
+- ❓ Unknown format skipped: /Users/shonheersink/memoir/fragments/ache_architect.md
+- ❓ Unknown format skipped: /Users/shonheersink/frisson_journal/entries/.md
+- ❓ Unknown format skipped: /Users/shonheersink/frisson_journal/outreach/2025-09-02-Upwork Profile.md
+- ❓ Unknown format skipped: /Users/shonheersink/git_repos/active/emotional_budget_tracker/README.md
+- ❓ Unknown format skipped: /Users/shonheersink/git_repos/active/emotional_budget_tracker/rituals/README.md
+- ⏳ Tracker format deferred: /Users/shonheersink/Documents/emotional_tracker/emotional_tracker.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/Oslo Positioning Plan - AI-n_Native Transition/Oslo_Positioning_Plan_—_AI-Native_Transition.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/decompression/Decompression_Ritual_Options.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/oslo_strategy/Lagos_Opportunities.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/phoenix_portfolio/detective.sh_concept.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/phoenix_portfolio/emotional_budget_tracker_code_placeholder.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/phoenix_portfolio/Idea_Repository_-_Rituals_and_Sacred_Tasks.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/phoenix_portfolio/parser/log.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/phoenix_portfolio/scripts/launcher/README.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/phoenix_portfolio/scripts/README.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/phoenix_portfolio/window_of_wonder.md.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/phoenix_portfolio/Phoenix_Portfoli_Ritual_-_October_Launch.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/code_fragments/main.py_-_emotional_budget_tracker_(draft).md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/README.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/index.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/entries/2025-08-24-17-54-EDT.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/entries/2025-08-24-runner-lightning.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/entries/2025-08-31-evening-release.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/entries/2025-09-02-signal-mapped.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/entries/2025-09-06-18-24.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/entries/2025-09-03-false_signal.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/entries/2025-08-27-Cabin Dream: Bruce, the Call, and the Trailer That Waits.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/README.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/pulses/2025-09-09-1717-Exit Mapped, Craving Redirected, Presence Held.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/pulses/2025-08-24-1640-yaz shimmer, late afternoon.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/budget/2025-09-02-Clothing purchase for emotional recalibration.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/budget/2025-09-02-Upwork Profile launch.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/training_strategy/emotional_budget_tracker_schema_sketch.md.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/rituals/archive/README.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/rituals/README.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/rituals/.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/emotional_logs/ache_architect.md
+- ❓ Unknown format skipped: /Users/shonheersink/memoir/fragments/ache_architect.md
+- ❓ Unknown format skipped: /Users/shonheersink/frisson_journal/entries/.md
+- ❓ Unknown format skipped: /Users/shonheersink/frisson_journal/outreach/2025-09-02-Upwork Profile.md
+- ❓ Unknown format skipped: /Users/shonheersink/git_repos/active/emotional_budget_tracker/README.md
+- ❓ Unknown format skipped: /Users/shonheersink/git_repos/active/emotional_budget_tracker/rituals/README.md
+- ⏳ Tracker format deferred: /Users/shonheersink/Documents/emotional_tracker/emotional_tracker.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/Oslo Positioning Plan - AI-n_Native Transition/Oslo_Positioning_Plan_—_AI-Native_Transition.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/decompression/Decompression_Ritual_Options.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/oslo_strategy/Lagos_Opportunities.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/phoenix_portfolio/detective.sh_concept.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/Oslo Positioning Plan - AI-n_Native Transition/Oslo_Positioning_Plan_—_AI-Native_Transition.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/decompression/Decompression_Ritual_Options.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/oslo_strategy/Lagos_Opportunities.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/phoenix_portfolio/detective.sh_concept.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/phoenix_portfolio/Idea_Repository_-_Rituals_and_Sacred_Tasks.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/phoenix_portfolio/window_of_wonder.md.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/phoenix_portfolio/Phoenix_Portfoli_Ritual_-_October_Launch.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/Oslo Positioning Plan - AI-n_Native Transition/Oslo_Positioning_Plan_—_AI-Native_Transition.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/decompression/Decompression_Ritual_Options.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/oslo_strategy/Lagos_Opportunities.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/phoenix_portfolio/detective.sh_concept.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/phoenix_portfolio/Idea_Repository_-_Rituals_and_Sacred_Tasks.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/phoenix_portfolio/window_of_wonder.md.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/phoenix_portfolio/Phoenix_Portfoli_Ritual_-_October_Launch.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/pulses/2025-09-09-1717-Exit Mapped, Craving Redirected, Presence Held.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/frisson_journal/pulses/2025-08-24-1640-yaz shimmer, late afternoon.md
+- ❓ Unknown format skipped: /Users/shonheersink/Phoenix/emotional_logs/ache_architect.md
+- ❓ Unknown format skipped: /Users/shonheersink/memoir/fragments/ache_architect.md
+- ❓ Unknown format skipped: /Users/shonheersink/frisson_journal/outreach/2025-09-02-Upwork Profile.md
+- ⏳ Tracker format deferred: /Users/shonheersink/Documents/emotional_tracker/emotional_tracker.md
