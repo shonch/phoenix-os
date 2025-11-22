@@ -1,3 +1,13 @@
-dnspython==2.8.0
+# Core Phoenix relics
+fastapi
+uvicorn
+pydantic
+python-jose[cryptography]
+requests
+passlib[bcrypt]
+pydantic[email]
+
+# Database + environment
 pymongo==4.15.4
+dnspython==2.8.0
 python-dotenv==1.2.1

@@ -63,6 +63,7 @@ def menu():
         print("13. Valhalla Tracker — Module Status Ritual")
         print("14. Symbolic Tag Ritual — Manage Emotional Overlays")
         print("15. Exit")  # Moved to end
+        print("16. User Management Ritual — Shape Sovereign Identities")
 
         choice = input("Enter choice [1–15]: ").strip()
 
@@ -96,6 +97,8 @@ def menu():
             launch_module_by_path("py/tag_manager.py")
         elif choice == "15":
             print("🕊️ Ritual session complete. Phoenix rests.")
+        elif choice == "16":
+            launch_module_by_path("launcher/manage_users.py")
             break
         else:
             print("Invalid choice. Try again.")
