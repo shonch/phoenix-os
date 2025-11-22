@@ -1,2 +1,22 @@
+# Virtual environments
 venv/
 backend/venv/
+
+# Environment variables and secrets
+.env
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Logs
+*.log
+
+# OS-specific files
+.DS_Store
+
+# Uvicorn reload artifacts
+*.pid
