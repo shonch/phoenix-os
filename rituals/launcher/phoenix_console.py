@@ -98,7 +98,10 @@ def menu():
         elif choice == "15":
             print("🕊️ Ritual session complete. Phoenix rests.")
         elif choice == "16":
-            launch_module_by_path("launcher/manage_users.py")
+            print("🕊️ Sovereign Identity altar is already live.")
+            print("Access user management at: http://127.0.0.1:8000/users")
+            print("Login endpoint: http://127.0.0.1:8000/users/login")
+            print("Use curl, httpie, or Postman to interact with the API.")
             break
         else:
             print("Invalid choice. Try again.")

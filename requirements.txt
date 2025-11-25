@@ -1,13 +1,15 @@
 # Core Phoenix relics
-fastapi
-uvicorn
-pydantic
-python-jose[cryptography]
-requests
-passlib[bcrypt]
+fastapi==0.115.0
+uvicorn==0.32.0
+pydantic==2.9.2
+python-jose[cryptography]==3.3.0
+requests==2.32.3
+passlib[bcrypt]==1.7.4
+bcrypt==4.2.0
 pydantic[email]
 
 # Database + environment
-pymongo==4.15.4
+pymongo==4.9.2
+motor==3.6.0
 dnspython==2.8.0
-python-dotenv==1.2.1
+python-dotenv==1.0.1
