@@ -5,6 +5,7 @@ from datetime import datetime
 import os
 import uuid
 from dotenv import load_dotenv
+from phoenix_engine.utils.tag_utils import calculate_score
 
 # Load environment variables
 load_dotenv()
@@ -40,20 +41,39 @@ def create_tag(tag_data: dict) -> str:
             if field not in existing and field in tag_data:
                 updates[field] = tag_data[field]
 
-        collection.update_one(
-            {"tag_name": tag_name},
-            {"$set": updates}
-        )
+        # Add user_id if provided
+        if "user_id" in tag_data:
+            user_ids = existing.get("user_ids", [])
+            if tag_data["user_id"] not in user_ids:
+                user_ids.append(tag_data["user_id"])
+            updates["user_ids"] = user_ids
+
+        # Recalculate promotion score
+        score = calculate_score({**existing, **updates})
+        updates["promotion_score"] = score
+        updates["promotion_status"] = "candidate" if score < 0.7 else "promoted"
+        if score >= 0.7:
+            updates["last_promoted_at"] = datetime.utcnow().isoformat()
+
+        collection.update_one({"tag_name": tag_name}, {"$set": updates})
         return existing["tag_id"]
+
     else:
         # Create new tag
         tag_data["tag_name"] = tag_name
         tag_data["tag_id"] = str(uuid.uuid4())
         tag_data["created_at"] = datetime.utcnow().isoformat()
         tag_data["usage_count"] = 1
+
+        # Initialize promotion fields
+        tag_data["user_ids"] = [tag_data.get("user_id")] if "user_id" in tag_data else []
+        tag_data["promotion_score"] = calculate_score(tag_data)
+        tag_data["promotion_status"] = "candidate"
+        tag_data["last_promoted_at"] = None
+        tag_data["version"] = 1
+
         collection.insert_one(tag_data)
         return tag_data["tag_id"]
-
 def select_tag(query: dict) -> list:
     """
     Retrieves symbolic tags matching a query.

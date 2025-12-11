@@ -1,15 +1,27 @@
 # Core Phoenix relics
-fastapi==0.115.0
-uvicorn==0.32.0
-pydantic==2.9.2
+fastapi==0.119.0          # bump to match Valhalla
+uvicorn==0.37.0           # bump to match Valhalla
+pydantic==2.12.0          # bump to match Valhalla
 python-jose[cryptography]==3.3.0
-requests==2.32.3
+requests==2.32.5          # bump to match Valhalla
 passlib[bcrypt]==1.7.4
 bcrypt==4.2.0
 pydantic[email]
 
 # Database + environment
-pymongo==4.9.2
-motor==3.6.0
+pymongo==4.15.1           # bump to match Valhalla
+motor==3.7.0
 dnspython==2.8.0
-python-dotenv==1.0.1
+python-dotenv==1.1.1      # bump to match Valhalla
+
+# Valhalla extras
+annotated-types==0.7.0
+anyio==4.11.0
+h11==0.16.0
+idna==3.10
+sniffio==1.3.1
+starlette==0.48.0
+urllib3==2.5.0
+pytokens>=0.3.0
+typing-inspection==0.4.2
+typing_extensions==4.15.0
