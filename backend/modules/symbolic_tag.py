@@ -64,6 +64,8 @@ def create_tag(tag_data: dict) -> str:
         tag_data["tag_id"] = str(uuid.uuid4())
         tag_data["created_at"] = datetime.utcnow().isoformat()
         tag_data["usage_count"] = 1
+        # Set visibility (default private unless provided)
+        tag_data["visibility"] = tag_data.get("visibility", "private")
 
         # Initialize promotion fields
         tag_data["user_ids"] = [tag_data.get("user_id")] if "user_id" in tag_data else []
@@ -102,11 +104,11 @@ def render_overlay(tag_id: str) -> dict:
     return {
         "emoji": tag.get("emoji", "🌀"),
         "color": tag.get("color", "#999999"),
-        "sass_level": tag.get("sass_level", 0),
+
         "archetype": tag.get("archetype", "unknown"),
         "emotional_weight": tag.get("emotional_weight", "neutral"),
         "label": tag.get("tag_name", "Unnamed Tag"),
-        "dominatrix_affinity": tag.get("dominatrix_affinity", [])
+
     }
 
 def update_tag(tag_id: str, updates: dict) -> bool:
