@@ -1,10 +1,19 @@
-# backend/routes/delete_log_routes.py
+# phoenix_portfolio/backend/routes/delete_log_routes.py
+
 from fastapi import APIRouter, HTTPException, Depends
 from datetime import datetime
 from bson import ObjectId
-from backend.mongo_client import db
-from backend.schemas.delete_log import DeleteLogCreate, DeleteLogResponse
-from backend.utils.serialization import serialize_doc, serialize_docs
+
+# Corrected imports for the new project structure
+from phoenix_portfolio.backend.mongo_client import db
+from phoenix_portfolio.backend.schemas.delete_log import (
+    DeleteLogCreate,
+    DeleteLogResponse,
+)
+from phoenix_portfolio.backend.utils.serialization import (
+    serialize_doc,
+    serialize_docs,
+)
 
 router = APIRouter(prefix="/delete_log", tags=["Delete Log"])
 
@@ -41,7 +50,10 @@ def list_deletions(user=Depends(get_current_user)):
 # -------------------------
 @router.get("/{id}", response_model=DeleteLogResponse)
 def get_deletion(id: str, user=Depends(get_current_user)):
-    doc = db["deleted_fragments"].find_one({"_id": ObjectId(id), "user_id": user["user_id"]})
+    doc = db["deleted_fragments"].find_one(
+        {"_id": ObjectId(id), "user_id": user["user_id"]}
+    )
     if not doc:
         raise HTTPException(status_code=404, detail="Delete log not found")
     return serialize_doc(doc)
+

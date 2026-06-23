@@ -1,17 +1,23 @@
+# phoenix_portfolio/backend/schemas/emerge.py
+
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
 
+
 class EmergeCreate(BaseModel):
-    rev_type: str
-    trigger: str
+    rev_type: str          # identity, grief, pattern, longing, etc.
+    trigger: str           # dream, phrase, memory, etc.
     reflection: Optional[str] = None
     weather: Optional[str] = None
-    tags: List[str] = ["emerge"]
+
 
 class EmergeResponse(EmergeCreate):
     id: str
-    date: datetime
     subject: str
+    tags: List[str]
+    timestamp: datetime
+    type: str              # "revelation"
     content: str
-    source: Optional[str] = "emerge_routes"
+    source_system: str
+

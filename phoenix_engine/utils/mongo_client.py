@@ -43,3 +43,22 @@ db = client[DB_NAME]
 users_collection = db["users"]
 fragments_collection = db["emotional_fragments"]
 tag_index_collection = db["tag_index"]
+
+# ---------------------------------------------------------
+# NEW: Ensure text index exists for search functionality
+# ---------------------------------------------------------
+try:
+    fragments_collection.create_index(
+        [
+            ("title", "text"),
+            ("subject", "text"),
+            ("content", "text"),
+            ("tags", "text")
+        ],
+        name="fragment_text_index",
+        default_language="english"
+    )
+    print("Phoenix Engine: text index ensured on emotional_fragments.")
+except Exception as e:
+    print(f"Phoenix Engine: failed to create text index: {e}")
+

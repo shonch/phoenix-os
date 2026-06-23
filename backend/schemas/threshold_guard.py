@@ -1,17 +1,23 @@
+# phoenix_portfolio/backend/schemas/threshold_guard.py
+
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
 
-class ThresholdCreate(BaseModel):
-    threshold_type: str
-    status: str
-    anchor: str
-    weather: Optional[str] = None
-    tags: List[str] = ["threshold"]
 
-class ThresholdResponse(ThresholdCreate):
+class ThresholdGuardCreate(BaseModel):
+    threshold_type: str          # grief, fatigue, legacy, trust, etc.
+    status: str                  # stable, fragile, breached
+    anchor: str                  # word, symbol, or emotional tether
+    weather: Optional[str] = None
+
+
+class ThresholdGuardResponse(ThresholdGuardCreate):
     id: str
-    date: datetime
     subject: str
+    tags: List[str]
+    timestamp: datetime
+    type: str                    # "threshold_scan"
     content: str
-    source: Optional[str] = "threshold_guard_routes"
+    source_system: str
+

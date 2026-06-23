@@ -1,62 +1,109 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from datetime import datetime
 from bson import ObjectId
-from backend.mongo_client import db
-from backend.schemas.threshold_guard import ThresholdCreate, ThresholdResponse
-from backend.utils.serialization import serialize_doc, serialize_docs
-from backend.modules.symbolic_tag import normalize_tag, create_tag
 
-router = APIRouter(prefix="/thresholds", tags=["Threshold Guard"])
+from phoenix_portfolio.backend.schemas.threshold_guard import (
+    ThresholdGuardCreate,
+    ThresholdGuardResponse,
+)
+from phoenix_portfolio.backend.schemas.api_fragments import (
+    FragmentLogRequest,
+    FragmentResponse,
+)
+from phoenix_portfolio.backend.services.ingestion import ingest_fragment
+from phoenix_portfolio.phoenix_platform.auth import verify_token
 
-@router.post("/", response_model=ThresholdResponse)
-def log_threshold(entry: ThresholdCreate):
-    timestamp = datetime.utcnow()
-    emotional_weight = "heavy" if entry.status == "breached" else "neutral"
-    final_tags = [normalize_tag(tag) for tag in entry.tags] + [normalize_tag(entry.anchor)]
+router = APIRouter(prefix="/threshold_guard", tags=["Threshold Guard"])
 
-    for tag in final_tags:
-        tag_data = {
-            "tag_name": tag,
-            "emoji": "🌀",
-            "archetype": "unclassified",
-            "sass_level": 0,
-            "emotional_weight": emotional_weight,
-            "color": "#999999",
-            "source_system": "phoenix",
-            "description": "Auto-inserted from threshold_guard_routes",
-            "dominatrix_affinity": []
-        }
-        create_tag(tag_data)
 
-    md_content = f"""### 🛡️ Threshold Scan
+def get_current_user_id(user_id: str = Depends(verify_token)):
+    return {"user_id": user_id}
 
-**Type**: {entry.threshold_type}  
-**Status**: {entry.status}  
-**Anchor**: {entry.anchor}  
-**Weather**: {entry.weather or "N/A"}  
-**Timestamp**: {timestamp.isoformat()}  
-"""
 
-    doc = {
-        "subject": f"Threshold: {entry.threshold_type}",
-        "tags": final_tags,
-        "weather": entry.weather,
-        "content": md_content,
-        "date": timestamp,
-        "source": "threshold_guard_routes",
-    }
-    result = db["thresholds"].insert_one(doc)
-    doc["id"] = str(result.inserted_id)
-    return doc
+@router.post("/", response_model=FragmentResponse)
+def log_threshold_scan(entry: ThresholdGuardCreate, user=Depends(get_current_user_id)):
+    """
+    Threshold Guard ingestion using the unified PhoenixTag-aware ingestion wrapper.
+    Writes to the 'thresholds' collection.
+    """
+    try:
+        user_id = user["user_id"]
 
-@router.get("/", response_model=list[ThresholdResponse])
-def list_thresholds():
-    docs = list(db["thresholds"].find())
-    return serialize_docs(docs)
+        anchor_normalized = entry.anchor.lower().replace(" ", "_")
 
-@router.get("/{id}", response_model=ThresholdResponse)
-def get_threshold(id: str):
-    threshold = db["thresholds"].find_one({"_id": ObjectId(id)})
-    if not threshold:
-        raise HTTPException(status_code=404, detail="Threshold not found")
-    return serialize_doc(threshold)
+        req = FragmentLogRequest(
+            module="threshold_guard",
+            type="threshold_scan",
+            layer="threshold",
+
+            title=f"Threshold Scan — {entry.threshold_type}",
+            subject=f"Status: {entry.status}",
+
+            content=None,
+            weather=entry.weather,
+
+            # Tags become PhoenixTag objects via ingestion wrapper
+            tags=[
+                entry.threshold_type,
+                entry.status,
+                anchor_normalized,
+                "threshold_scan",
+            ],
+
+            body=None,
+
+            extra={
+                "threshold_type": entry.threshold_type,
+                "status": entry.status,
+                "anchor": anchor_normalized,
+                "weather": entry.weather,
+            },
+
+            source="threshold_guard_routes",
+        )
+
+        return ingest_fragment(req, user_id=user_id)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/", response_model=list[ThresholdGuardResponse])
+def list_threshold_scans(user=Depends(get_current_user_id)):
+    """
+    Legacy-compatible listing of threshold scans.
+    """
+    try:
+        from phoenix_portfolio.backend.mongo_client import db
+        docs = list(
+            db["thresholds"].find({
+                "type": "threshold_scan",
+                "user_id": user["user_id"],
+            })
+        )
+        return docs
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/{id}", response_model=ThresholdGuardResponse)
+def get_threshold_scan(id: str, user=Depends(get_current_user_id)):
+    """
+    Legacy-compatible single threshold scan retrieval.
+    """
+    try:
+        from phoenix_portfolio.backend.mongo_client import db
+
+        doc = db["thresholds"].find_one({
+            "_id": ObjectId(id),
+            "user_id": user["user_id"],
+        })
+
+        if not doc:
+            raise HTTPException(status_code=404, detail="Threshold scan not found")
+
+        return doc
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+

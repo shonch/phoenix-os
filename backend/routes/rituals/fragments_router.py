@@ -1,75 +1,157 @@
-# backend/routes/rituals/fragments_router.py
-# Phoenix Fragments Router — Log Emotion ritual
+# phoenix_portfolio/backend/routes/rituals/fragments_router.py
+# Phoenix Fragments API — Unified Fragment Index
 
-from fastapi import APIRouter
-from pydantic import BaseModel
-from datetime import datetime
+from typing import List, Optional
 
-from backend.mongo_client import db
-from backend.modules.symbolic_tag import create_tag, normalize_tag, suggest_tags
+from fastapi import APIRouter, HTTPException, Query
+from bson import ObjectId
 
-router = APIRouter(prefix="/rituals/fragments", tags=["fragments"])
+from phoenix_portfolio.backend.mongo_client import db
+from phoenix_portfolio.backend.schemas.fragments import Fragment
 
-class EmotionLog(BaseModel):
-    subject: str
-    tags: list[str]
-    weather: str | None = None
-    notes: str
+router = APIRouter(tags=["fragments"])
 
-@router.post("/log_emotion")
-def log_emotion(entry: EmotionLog):
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-    final_tags = []
+# All collections that hold Phoenix fragments, with a default "type" hint
+FRAGMENT_COLLECTIONS = [
+    ("fragments", "emotion_fragment"),          # log_emotion.py
+    ("emotional_fragments", "emotional_fragment"),  # pulse, grind, anti-grind, mirror, etc.
+    ("revelations", "revelation"),
+    ("thresholds", "threshold"),
+    ("clues", "clue"),
+]
 
-    # Normalize and suggest tags (for now, auto-pick normalized; GUI can expose suggestions later)
-    for raw_tag in entry.tags:
-        normalized = normalize_tag(raw_tag)
-        suggestions = suggest_tags(normalized)
-        if suggestions:
-            final_tags.append(suggestions[0]["tag_name"])  # auto-pick first suggestion
-        else:
-            final_tags.append(normalized)
 
-        # Ensure tag exists in symbolic_tags
-        tag_data = {
-            "tag_name": final_tags[-1],
-            "title": final_tags[-1].replace("_", " ").title(),
-            "emoji": "🌀",
-            "archetype": "unclassified",
-            "sass_level": 0,
-            "emotional_weight": "neutral",
-            "color": "#999999",
-            "source_system": "phoenix",
-            "description": "Auto-inserted from log_emotion endpoint",
-            "dominatrix_affinity": [],
-            "created_at": datetime.utcnow().isoformat()
-        }
-        create_tag(tag_data)
+def _normalize_doc(doc: dict, collection: str, default_type: Optional[str] = None) -> Fragment:
+    """Normalize raw Mongo docs into a unified Fragment model."""
+    frag_id = str(doc.get("_id"))
 
-    # Markdown content
-    md_content = f"""### 📜 Emotion Log
+    # Try to find a reasonable timestamp
+    timestamp = (
+        doc.get("timestamp")
+        or doc.get("logged")
+        or doc.get("date")
+        or doc.get("created_at")
+    )
 
-**Subject**: {entry.subject}  
-**Tags**: {" ".join(final_tags)}  
-**Weather**: {entry.weather}  
-**Timestamp**: {timestamp}  
+    title = doc.get("title") or doc.get("subject") or doc.get("note")
 
-{entry.notes}
-"""
+    content = (
+        doc.get("content")
+        or doc.get("notes")
+        or doc.get("message")
+        or doc.get("raw_fragment")
+    )
 
-    doc = {
-        "subject": entry.subject,
-        "tags": final_tags,
-        "weather": entry.weather,
-        "content": md_content,
-        "date": timestamp,
-        "source": "fragments_router"
+    return Fragment(
+        id=frag_id,
+        collection=collection,
+        type=doc.get("type") or default_type,
+        title=title,
+        subject=doc.get("subject"),
+        tags=doc.get("tags", []),
+        timestamp=timestamp,
+        date=doc.get("date"),
+        content=content,
+        source=doc.get("source") or doc.get("source_system"),
+    )
+
+
+@router.get("/", response_model=List[Fragment])
+def list_fragments(limit: int = 200) -> List[Fragment]:
+    """
+    Unified Phoenix Fragment Index.
+
+    Returns fragments from all configured collections, normalized into a single schema,
+    sorted by timestamp (most recent first).
+    """
+    fragments: List[Fragment] = []
+
+    for collection, default_type in FRAGMENT_COLLECTIONS:
+        # We sort by "date" where available; many of your docs use that.
+        for doc in db[collection].find().sort("date", -1).limit(limit):
+            fragments.append(_normalize_doc(doc, collection, default_type))
+
+    # Global sort by timestamp string (best-effort, since legacy data is mixed)
+    fragments.sort(key=lambda f: f.timestamp or "", reverse=True)
+
+    return fragments[:limit]
+
+
+@router.get("/{fragment_id}", response_model=Fragment)
+def get_fragment(fragment_id: str) -> Fragment:
+    """
+    Look up a fragment by ID across all fragment collections.
+    """
+    for collection, default_type in FRAGMENT_COLLECTIONS:
+        try:
+            doc = db[collection].find_one({"_id": ObjectId(fragment_id)})
+        except Exception:
+            # Not a valid ObjectId, skip
+            doc = None
+
+        if doc:
+            return _normalize_doc(doc, collection, default_type)
+
+    raise HTTPException(status_code=404, detail="Fragment not found")
+
+
+@router.get("/search/", response_model=List[Fragment])
+def search_fragments(
+    q: str = Query(..., description="Search text"),
+    limit: int = 200,
+) -> List[Fragment]:
+    """
+    Simple full-text-ish search across all fragment collections.
+
+    Searches in title/subject/content/tags fields.
+    """
+    fragments: List[Fragment] = []
+
+    query = {
+        "$or": [
+            {"title": {"$regex": q, "$options": "i"}},
+            {"subject": {"$regex": q, "$options": "i"}},
+            {"content": {"$regex": q, "$options": "i"}},
+            {"notes": {"$regex": q, "$options": "i"}},
+            {"message": {"$regex": q, "$options": "i"}},
+            {"tags": {"$elemMatch": {"$regex": q, "$options": "i"}}},
+        ]
     }
-    result = db["fragments"].insert_one(doc)
 
-    return {
-        "message": "Emotion logged",
-        "id": str(result.inserted_id),
-        "tags": final_tags,
-        "timestamp": timestamp
-    }
+    for collection, default_type in FRAGMENT_COLLECTIONS:
+        for doc in db[collection].find(query).limit(limit):
+            fragments.append(_normalize_doc(doc, collection, default_type))
+
+    fragments.sort(key=lambda f: f.timestamp or "", reverse=True)
+    return fragments[:limit]
+
+
+@router.get("/by_tag/{tag}", response_model=List[Fragment])
+def fragments_by_tag(tag: str, limit: int = 200) -> List[Fragment]:
+    """
+    Return all fragments that contain a given tag.
+    """
+    fragments: List[Fragment] = []
+
+    for collection, default_type in FRAGMENT_COLLECTIONS:
+        for doc in db[collection].find({"tags": tag}).limit(limit):
+            fragments.append(_normalize_doc(doc, collection, default_type))
+
+    fragments.sort(key=lambda f: f.timestamp or "", reverse=True)
+    return fragments[:limit]
+
+
+@router.get("/by_type/{fragment_type}", response_model=List[Fragment])
+def fragments_by_type(fragment_type: str, limit: int = 200) -> List[Fragment]:
+    """
+    Return fragments filtered by their type field.
+    """
+    fragments: List[Fragment] = []
+
+    for collection, default_type in FRAGMENT_COLLECTIONS:
+        for doc in db[collection].find({"type": fragment_type}).limit(limit):
+            fragments.append(_normalize_doc(doc, collection, default_type))
+
+    fragments.sort(key=lambda f: f.timestamp or "", reverse=True)
+    return fragments[:limit]
+

@@ -1,18 +1,22 @@
-# backend/schemas/detective.py
+# phoenix_portfolio/backend/schemas/detective.py
+
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import List, Optional
 from datetime import datetime
 
-class DetectiveClueCreate(BaseModel):
+class DetectiveCreate(BaseModel):
     clue_type: str        # e.g. body, dream, glitch, longing
-    location: str         # e.g. memory, Phoenix folder, terminal
+    location: str         # e.g. memory, Phoenix folder, terminal, dream
     status: str           # e.g. unresolved, echoing, integrated
     symbol: str           # e.g. song, scent, phrase, image
     note: Optional[str] = None
     weather: Optional[str] = None
-    tags: List[str] = []
 
-class DetectiveClueResponse(DetectiveClueCreate):
+class DetectiveResponse(DetectiveCreate):
     id: str
+    tags: List[str]
     timestamp: datetime
-    source: Optional[str] = "detective_routes"
+    type: str
+    content: str
+    source_system: str
+

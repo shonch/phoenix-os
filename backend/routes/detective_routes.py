@@ -1,49 +1,110 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from datetime import datetime
 from bson import ObjectId
-from backend.mongo_client import db
-from backend.schemas.detective import DetectiveCreate, DetectiveResponse
-from backend.utils.serialization import serialize_doc, serialize_docs
-from backend.modules.symbolic_tag import normalize_tag, create_tag
+
+from phoenix_portfolio.backend.schemas.detective import (
+    DetectiveCreate,
+    DetectiveResponse,
+)
+from phoenix_portfolio.backend.schemas.api_fragments import (
+    FragmentLogRequest,
+    FragmentResponse,
+)
+from phoenix_portfolio.backend.services.ingestion import ingest_fragment
+from phoenix_portfolio.phoenix_platform.auth import verify_token
 
 router = APIRouter(prefix="/detective", tags=["Detective"])
 
-@router.post("/", response_model=DetectiveResponse)
-def log_clue(entry: DetectiveCreate):
-    timestamp = datetime.utcnow()
-    final_tags = [normalize_tag(tag) for tag in entry.tags]
 
-    for tag in final_tags:
-        create_tag({"tag_name": tag, "description": "Auto-inserted from detective_routes"})
+def get_current_user_id(user_id: str = Depends(verify_token)):
+    return {"user_id": user_id}
 
-    md_content = f"""### 🕵️ Detective Log
-**Clue**: {entry.clue}  
-**Source**: {entry.source}  
-**Timestamp**: {timestamp.isoformat()}  
-"""
 
-    doc = {
-        "clue": entry.clue,
-        "source": entry.source,
-        "tags": final_tags,
-        "timestamp": timestamp,
-        "type": "detective_clue",
-        "content": md_content,
-        "note": "Detective clue logged.",
-        "source_system": "detective_routes",
-    }
-    result = db["emotional_fragments"].insert_one(doc)
-    doc["id"] = str(result.inserted_id)
-    return doc
+@router.post("/", response_model=FragmentResponse)
+def log_clue(entry: DetectiveCreate, user=Depends(get_current_user_id)):
+    """
+    Detective ingestion using the unified PhoenixTag-aware ingestion wrapper.
+    """
+    try:
+        user_id = user["user_id"]
+
+        # Build ingestion request
+        req = FragmentLogRequest(
+            module="detective",
+            type="detective_clue",
+            layer="emotional",
+
+            title=f"Detective Clue — {entry.clue_type}",
+            subject=f"{entry.location} / {entry.symbol}",
+
+            content=entry.note,
+            weather=entry.weather,
+
+            # Tags become PhoenixTag objects via ingestion wrapper
+            tags=[
+                entry.clue_type,
+                entry.location,
+                entry.status,
+                entry.symbol,
+                "detective_clue",
+            ],
+
+            body=entry.note,
+
+            extra={
+                "clue_type": entry.clue_type,
+                "location": entry.location,
+                "status": entry.status,
+                "symbol": entry.symbol,
+                "note": entry.note,
+                "weather": entry.weather,
+            },
+
+            source="detective_routes",
+        )
+
+        return ingest_fragment(req, user_id=user_id)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/", response_model=list[DetectiveResponse])
-def list_clues():
-    docs = list(db["emotional_fragments"].find({"type": "detective_clue"}))
-    return serialize_docs(docs)
+def list_clues(user=Depends(get_current_user_id)):
+    """
+    Legacy-compatible listing of detective clues.
+    """
+    try:
+        from phoenix_portfolio.backend.mongo_client import db
+        docs = list(
+            db["emotional_fragments"].find({
+                "type": "detective_clue",
+                "user_id": user["user_id"],
+            })
+        )
+        return docs
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/{id}", response_model=DetectiveResponse)
-def get_clue(id: str):
-    clue = db["emotional_fragments"].find_one({"_id": ObjectId(id)})
-    if not clue:
-        raise HTTPException(status_code=404, detail="Clue not found")
-    return serialize_doc(clue)
+def get_clue(id: str, user=Depends(get_current_user_id)):
+    """
+    Legacy-compatible single clue retrieval.
+    """
+    try:
+        from phoenix_portfolio.backend.mongo_client import db
+
+        doc = db["emotional_fragments"].find_one({
+            "_id": ObjectId(id),
+            "user_id": user["user_id"],
+        })
+
+        if not doc:
+            raise HTTPException(status_code=404, detail="Clue not found")
+
+        return doc
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+

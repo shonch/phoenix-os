@@ -1,14 +1,21 @@
+# phoenix_portfolio/backend/schemas/mirror.py
+
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
 
+
 class MirrorCreate(BaseModel):
-    tags: List[str] = ["mirror", "revelation", "mythic_identity"]
+    note: Optional[str] = None
+    weather: Optional[str] = None
+
 
 class MirrorResponse(MirrorCreate):
     id: str
+    tags: List[str]
+    theme: str
     timestamp: datetime
-    theme: str = "Mirror reflection"
-    note: str = "Reflected on mythic identity. Reclaimed emotional truth."
+    type: str
     content: str
-    source: Optional[str] = "mirror_routes"
+    source_system: str
+

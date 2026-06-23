@@ -1,56 +1,118 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from datetime import datetime
-from bson import ObjectId
-from backend.mongo_client import db
-from backend.schemas.grind_protocol import GrindScanCreate, GrindScanResponse
-from backend.utils.serialization import serialize_doc, serialize_docs
-from backend.modules.symbolic_tag import normalize_tag, create_tag
+
+from phoenix_portfolio.backend.schemas.grind_protocol import (
+    GrindScanCreate,
+    GrindScanResponse,
+)
+from phoenix_portfolio.backend.schemas.api_fragments import (
+    FragmentLogRequest,
+    FragmentResponse,
+)
+from phoenix_portfolio.backend.services.ingestion import ingest_fragment
+from phoenix_portfolio.phoenix_platform.auth import verify_token
 
 router = APIRouter(prefix="/grind", tags=["Grind Protocol"])
 
-@router.post("/", response_model=GrindScanResponse)
-def log_scan(entry: GrindScanCreate):
-    timestamp = datetime.utcnow()
-    status = entry.status or ("pause" if entry.energy <= 4 or entry.sleep == "poor" or entry.urgency == "yes" else "clear")
-    final_tags = [normalize_tag(tag) for tag in entry.tags] + ["grind_scan"]
 
-    for tag in final_tags:
-        create_tag({"tag_name": tag, "description": "Auto-inserted from grind_protocol_routes"})
+def get_current_user_id(user_id: str = Depends(verify_token)):
+    return {"user_id": user_id}
 
-    md_content = f"""### ⚠️ Grind Protocol Scan
-**Energy Level**: {entry.energy}  
-**Sleep Quality**: {entry.sleep}  
-**Emotional State**: {entry.state}  
-**Urgency to Quit**: {entry.urgency}  
-**Status**: {status}  
-**Timestamp**: {timestamp.isoformat()}  
-"""
 
-    doc = {
-        "energy": entry.energy,
-        "sleep": entry.sleep,
-        "state": entry.state,
-        "urgency": entry.urgency,
-        "status": status,
-        "tags": final_tags,
-        "timestamp": timestamp,
-        "type": "grind_scan",
-        "content": md_content,
-        "note": "Grind protocol scan completed.",
-        "source_system": "grind_protocol_routes",
-    }
-    result = db["emotional_fragments"].insert_one(doc)
-    doc["id"] = str(result.inserted_id)
-    return doc
+def infer_status(energy: int, sleep: str, urgency: str) -> str:
+    if energy <= 4:
+        return "pause"
+    if sleep == "poor":
+        return "pause"
+    if urgency == "yes":
+        return "pause"
+    return "clear"
+
+
+@router.post("/", response_model=FragmentResponse)
+def log_scan(entry: GrindScanCreate, user=Depends(get_current_user_id)):
+    """
+    Grind Protocol ingestion using the unified PhoenixTag-aware ingestion wrapper.
+    """
+    try:
+        user_id = user["user_id"]
+        status = infer_status(entry.energy, entry.sleep, entry.urgency)
+
+        # Build the ingestion request
+        req = FragmentLogRequest(
+            module="grind_protocol",
+            type="grind_scan",
+            layer="emotional",
+
+            # Grind protocol does not use title/subject; note becomes content
+            title=f"Grind Scan ({status})",
+            subject=f"Energy {entry.energy}, Sleep {entry.sleep}",
+
+            content=entry.note,
+            weather=entry.weather,
+
+            # Tags become PhoenixTag objects via ingestion wrapper
+            tags=[entry.state, entry.sleep, status, "grind_scan"],
+
+            # Body is optional but helps expressive grammar
+            body=entry.note,
+
+            # Module-specific payload
+            extra={
+                "energy": entry.energy,
+                "sleep": entry.sleep,
+                "state": entry.state,
+                "urgency": entry.urgency,
+                "status": status,
+                "weather": entry.weather,
+            },
+
+            source="grind_protocol_routes",
+        )
+
+        return ingest_fragment(req, user_id=user_id)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/", response_model=list[GrindScanResponse])
-def list_scans():
-    docs = list(db["emotional_fragments"].find({"type": "grind_scan"}))
-    return serialize_docs(docs)
+def list_scans(user=Depends(get_current_user_id)):
+    """
+    Legacy-compatible listing of grind scans.
+    """
+    try:
+        from phoenix_portfolio.backend.mongo_client import db
+        docs = list(
+            db["emotional_fragments"].find({
+                "type": "grind_scan",
+                "user_id": user["user_id"],
+            })
+        )
+        return docs
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/{id}", response_model=GrindScanResponse)
-def get_scan(id: str):
-    scan = db["emotional_fragments"].find_one({"_id": ObjectId(id)})
-    if not scan:
-        raise HTTPException(status_code=404, detail="Grind scan not found")
-    return serialize_doc(scan)
+def get_scan(id: str, user=Depends(get_current_user_id)):
+    """
+    Legacy-compatible single scan retrieval.
+    """
+    try:
+        from bson import ObjectId
+        from phoenix_portfolio.backend.mongo_client import db
+
+        doc = db["emotional_fragments"].find_one({
+            "_id": ObjectId(id),
+            "user_id": user["user_id"],
+        })
+
+        if not doc:
+            raise HTTPException(status_code=404, detail="Grind scan not found")
+
+        return doc
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+

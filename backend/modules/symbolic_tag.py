@@ -1,119 +1,287 @@
-# backend/modules/symbolic_tag.py
+# phoenix_portfolio/backend/modules/symbolic_tag.py
 
-from pymongo import MongoClient
 from datetime import datetime
 import os
-import uuid
+
+from bson import ObjectId
 from dotenv import load_dotenv
-from phoenix_engine.utils.tag_utils import calculate_score
+from pymongo import MongoClient
 
-# Load environment variables
+from phoenix_portfolio.phoenix_engine.models.tag import PhoenixTag
+
+
+# -----------------------------
+# Normalization Helpers
+# -----------------------------
+
+def normalize_label(name: str) -> str:
+    """
+    Normalize a raw tag name into a canonical, lowercase, underscore form.
+    """
+    if not isinstance(name, str):
+        return ""
+    return (
+        name.strip()
+        .lower()
+        .replace("-", "_")
+        .replace(" ", "_")
+    )
+
+
+def _normalize_legacy_fields(tag: dict) -> dict:
+    """
+    Clean legacy Phoenix tags so they conform to the PhoenixTag schema.
+    Prevents ingestion failures when old tags contain invalid values.
+    """
+
+    # emotional_weight must be float or None
+    ew = tag.get("emotional_weight")
+    if isinstance(ew, str):
+        if ew.lower() in ["neutral", "none", "zero", ""]:
+            tag["emotional_weight"] = None
+        else:
+            try:
+                tag["emotional_weight"] = float(ew)
+            except Exception:
+                tag["emotional_weight"] = None
+
+    # visibility must be a string
+    if tag.get("visibility") is None:
+        tag["visibility"] = "private"
+
+    # archetype must be a string
+    if tag.get("archetype") is None:
+        tag["archetype"] = "emergent"
+
+    # category must be a string
+    if tag.get("category") is None:
+        tag["category"] = "custom"
+
+    # emoji must be a string
+    if tag.get("emoji") is None:
+        tag["emoji"] = "🌀"
+
+    # description must be a string
+    if tag.get("description") is None:
+        tag["description"] = ""
+
+    return tag
+
+
+# -----------------------------
+# Mongo Setup
+# -----------------------------
+
 load_dotenv()
-MONGO_URI = os.getenv("MONGO_URI")
-DB_NAME = os.getenv("DB_NAME")
 
-# Connect to Phoenix DB
+MONGO_URI = os.getenv("MONGO_URI")
+DB_NAME = os.getenv("DB_NAME", "phoenix_engine")
+
 client = MongoClient(MONGO_URI)
 db = client[DB_NAME]
 collection = db["symbolic_tags"]
 
+
+# -----------------------------
+# Core Tag Engine
+# -----------------------------
+
+def normalize_tag(tag_data: dict) -> dict:
+    """
+    Normalize a single tag object into a canonical PhoenixTag-shaped dict.
+
+    Behavior:
+      - Accepts full tag objects (not strings)
+      - If tag_id exists → resolve existing tag
+      - If no tag_id → create/update via create_tag()
+      - Always returns a PhoenixTag-compatible dict
+    """
+
+    if not isinstance(tag_data, dict):
+        return {}
+
+    # 1. Extract name + normalize label
+    raw_name = tag_data.get("name") or tag_data.get("label") or ""
+    if not raw_name:
+        return {}
+
+    label = normalize_label(raw_name)
+    user_id = tag_data.get("user_id")
+
+    # 2. If tag_id exists → resolve
+    tag_id = tag_data.get("tag_id")
+    if tag_id:
+        existing = None
+
+        # Try resolving by Mongo _id
+        try:
+            oid = ObjectId(tag_id)
+            existing = collection.find_one({"_id": oid})
+        except Exception:
+            existing = None
+
+        # Fallback: resolve by label + user_id
+        if not existing and user_id:
+            existing = collection.find_one({"label": label, "user_id": user_id})
+
+        if existing:
+            existing = _normalize_legacy_fields(existing)
+            existing["_id"] = str(existing["_id"])
+            existing["tag_id"] = existing.get("tag_id", existing["_id"])
+            return existing
+
+    # 3. No tag_id → create/update
+    create_payload = {
+        "name": raw_name,
+        "user_id": user_id,
+        "emoji": tag_data.get("emoji"),
+        "category": tag_data.get("category"),
+        "description": tag_data.get("description"),
+        "archetype": tag_data.get("archetype"),
+        "visibility": tag_data.get("visibility"),
+        "color": tag_data.get("color"),
+        "emotional_weight": tag_data.get("emotional_weight"),
+        "sass_level": tag_data.get("sass_level"),
+        "dominatrix_affinity": tag_data.get("dominatrix_affinity"),
+        "source_system": tag_data.get("source_system"),
+    }
+
+    created = create_tag(create_payload)
+    created["tag_id"] = created.get("tag_id", str(created.get("_id", "")))
+    return created
+
+
 def suggest_tags(partial: str, limit: int = 5) -> list:
     """
-    Suggests symbolic tags based on partial input.
-    Matches substrings and returns most frequently used tags.
+    Suggest symbolic tags based on partial input.
+    Matches substrings against the 'label' field and returns
+    the most frequently used tags (times_used desc).
     """
-    partial = normalize_tag(partial)
-    matches = collection.find({"tag_name": {"$regex": partial, "$options": "i"}})
-    sorted_matches = sorted(matches, key=lambda x: x.get("usage_count", 0), reverse=True)
-    return sorted_matches[:limit]
+    partial = normalize_label(partial)
+    matches = collection.find(
+        {"label": {"$regex": partial, "$options": "i"}}
+    ).sort("times_used", -1)
 
-def create_tag(tag_data: dict) -> str:
-    tag_name = normalize_tag(tag_data["tag_name"])
-    existing = collection.find_one({"tag_name": tag_name})
+    return list(matches.limit(limit))
+
+
+def create_tag(tag_data: dict) -> dict:
+    """
+    Create or update a symbolic tag using the unified PhoenixTag schema.
+    """
+
+    if "name" not in tag_data:
+        raise ValueError("tag_data must include 'name'")
+
+    if "user_id" not in tag_data:
+        raise ValueError("tag_data must include 'user_id'")
+
+    raw_name = tag_data["name"]
+    user_id = tag_data["user_id"]
+    label = normalize_label(raw_name)
+
+    # Check for existing tag
+    existing = collection.find_one({"label": label, "user_id": user_id})
 
     if existing:
-        # Update usage count
-        new_count = existing.get("usage_count", 1) + 1
-        updates = {"usage_count": new_count}
+        # Update existing tag
+        existing["times_used"] = existing.get("times_used", 1) + 1
+        existing["updated_at"] = datetime.utcnow().isoformat()
 
-        # Enrich missing fields
-        for field in ["title", "emoji", "archetype", "description", "color", "emotional_weight"]:
-            if field not in existing and field in tag_data:
-                updates[field] = tag_data[field]
+        # Apply new fields
+        for key, value in tag_data.items():
+            if value is not None:
+                existing[key] = value
 
-        # Add user_id if provided
-        if "user_id" in tag_data:
-            user_ids = existing.get("user_ids", [])
-            if tag_data["user_id"] not in user_ids:
-                user_ids.append(tag_data["user_id"])
-            updates["user_ids"] = user_ids
+        # Normalize legacy fields
+        existing = _normalize_legacy_fields(existing)
 
-        # Recalculate promotion score
-        score = calculate_score({**existing, **updates})
-        updates["promotion_score"] = score
-        updates["promotion_status"] = "candidate" if score < 0.7 else "promoted"
-        if score >= 0.7:
-            updates["last_promoted_at"] = datetime.utcnow().isoformat()
+        collection.update_one({"_id": existing["_id"]}, {"$set": existing})
+        return existing
 
-        collection.update_one({"tag_name": tag_name}, {"$set": updates})
-        return existing["tag_id"]
+    # Create new PhoenixTag
+    tag = PhoenixTag(
+        name=raw_name,
+        label=label,
+        user_id=user_id,
+        emoji=tag_data.get("emoji", "🌀"),
+        category=tag_data.get("category", "custom"),
+        description=tag_data.get("description", ""),
+        archetype=tag_data.get("archetype", "emergent"),
+        visibility=tag_data.get("visibility", "private"),
+        color=tag_data.get("color"),
+        emotional_weight=tag_data.get("emotional_weight"),
+        sass_level=tag_data.get("sass_level"),
+        dominatrix_affinity=tag_data.get("dominatrix_affinity"),
+        source_system=tag_data.get("source_system"),
+        user_ids=[user_id],
+    )
 
-    else:
-        # Create new tag
-        tag_data["tag_name"] = tag_name
-        tag_data["tag_id"] = str(uuid.uuid4())
-        tag_data["created_at"] = datetime.utcnow().isoformat()
-        tag_data["usage_count"] = 1
-        # Set visibility (default private unless provided)
-        tag_data["visibility"] = tag_data.get("visibility", "private")
+    tag_dict = tag.dict()
 
-        # Initialize promotion fields
-        tag_data["user_ids"] = [tag_data.get("user_id")] if "user_id" in tag_data else []
-        tag_data["promotion_score"] = calculate_score(tag_data)
-        tag_data["promotion_status"] = "candidate"
-        tag_data["last_promoted_at"] = None
-        tag_data["version"] = 1
+    # Normalize before saving
+    tag_dict = _normalize_legacy_fields(tag_dict)
 
-        collection.insert_one(tag_data)
-        return tag_data["tag_id"]
+    result = collection.insert_one(tag_dict)
+    tag_dict["_id"] = str(result.inserted_id)
+
+    return tag_dict
+
+
 def select_tag(query: dict) -> list:
     """
-    Retrieves symbolic tags matching a query.
-    Example: {"archetype": "guardian", "sass_level": {"$gte": 5}}
+    Retrieves symbolic tags matching a Mongo-style query.
     """
     return list(collection.find(query))
 
-def list_tags() -> list:
-    """
-    Returns all symbolic tags in the collection.
-    """
-    return list(collection.find())
 
-def normalize_tag(tag: str) -> str:
-    return tag.strip().lower().replace("-", "_").replace(" ", "_")
+def list_tags(user_id: str | None = None) -> list:
+    """
+    Returns symbolic tags.
+    """
+    query = {"user_id": user_id} if user_id else {}
+    return list(collection.find(query))
+
 
 def render_overlay(tag_id: str) -> dict:
     """
     Returns expressive overlay logic for CLI or UI rendering.
-    Includes color, sass level, archetype, and emotional weight.
     """
-    tag = collection.find_one({"tag_id": tag_id})
+    try:
+        oid = ObjectId(tag_id)
+    except Exception:
+        return {}
+
+    tag = collection.find_one({"_id": oid})
     if not tag:
         return {}
+
+    tag = _normalize_legacy_fields(tag)
 
     return {
         "emoji": tag.get("emoji", "🌀"),
         "color": tag.get("color", "#999999"),
-
         "archetype": tag.get("archetype", "unknown"),
-        "emotional_weight": tag.get("emotional_weight", "neutral"),
-        "label": tag.get("tag_name", "Unnamed Tag"),
-
+        "emotional_weight": tag.get("emotional_weight", None),
+        "label": tag.get("label", "unnamed_tag"),
+        "name": tag.get("name", tag.get("label", "")),
     }
+
 
 def update_tag(tag_id: str, updates: dict) -> bool:
     """
     Updates a symbolic tag with new values.
     """
-    result = collection.update_one({"tag_id": tag_id}, {"$set": updates})
+    try:
+        oid = ObjectId(tag_id)
+    except Exception:
+        return False
+
+    updates["updated_at"] = datetime.utcnow().isoformat()
+
+    # Normalize legacy fields before saving
+    updates = _normalize_legacy_fields(updates)
+
+    result = collection.update_one({"_id": oid}, {"$set": updates})
     return result.modified_count > 0
+
