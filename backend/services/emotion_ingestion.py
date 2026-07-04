@@ -44,7 +44,8 @@ def normalize_tags(incoming_tags: List[Tag]) -> List[PhoenixTag]:
         t_dict = t.dict()
 
         # Prefer explicit user_id on the tag; fall back to "system"
-        user_id = t_dict.get("user_id") or "system"
+        user_id = t_dict.get("user_id") or "shonh@icloud.com"
+
 
         # If we ever extend Tag to include tag_id, we can resolve by that.
         tag_id = t_dict.get("tag_id")

@@ -18,6 +18,7 @@ from phoenix_portfolio.backend.engines.classifier_engine import analyze_classifi
 from phoenix_portfolio.backend.engines.dashboard_engine import analyze_dashboard
 from phoenix_portfolio.backend.engines.phoenix_state_engine import analyze_phoenix_state
 
+from phoenix_portfolio.backend.modules.symbolic_tag import list_tags
 from phoenix_portfolio.backend.utils.state_serializer import StateSerializer
 
 
@@ -42,16 +43,12 @@ def get_state(user=Depends(get_current_user_id), limit: int = 200):
         ),
         "fragments": list(
             db["fragments"]
-            .find({})
-            .sort("timestamp", -1)
-            .limit(limit)
-        ),
-        "symbolic_tags": list(
-            db["symbolic_tags"]
             .find({"user_id": uid})
             .sort("timestamp", -1)
             .limit(limit)
         ),
+        # ✅ SYMBOLIC TAGS VIA SYMBOLIC TAG MODULE (NORMALIZED, SINGLE SOURCE OF TRUTH)
+        "symbolic_tags": list_tags(uid),
         "clues": list(
             db["clues"]
             .find({"user_id": uid})
