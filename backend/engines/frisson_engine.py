@@ -1,6 +1,9 @@
+# phoenix_portfolio/backend/engines/frisson_engine.py
+
 from collections import Counter
-from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
+
+from phoenix_portfolio.backend.mongo_client import db
 
 Fragment = Dict[str, Any]
 
@@ -24,25 +27,15 @@ FRISSON_PHRASES = [
 
 
 # ============================================================
-#   FRISSON ENGINE — Resonance, Awe, Mythic Charge
+#   FRISSON ENGINE — counts only
 # ============================================================
 
 def analyze_frisson_fragments(fragments: List[Fragment]) -> Dict[str, Any]:
-    """
-    Frisson Engine (Phoenix v3)
-    - ingestion-aware
-    - PhoenixTag-aware
-    - detects intensity, triggers, contexts
-    - returns structured resonance profile
-    """
-
     if not fragments:
         return {
-            "summary": "⚡ No frisson traces found. This may be a quiet or flat phase.",
             "intensity_profile": [],
             "triggers": [],
             "contexts": [],
-            "clues": [],
         }
 
     intensity_counter = Counter()
@@ -50,36 +43,24 @@ def analyze_frisson_fragments(fragments: List[Fragment]) -> Dict[str, Any]:
     context_counter = Counter()
 
     for frag in fragments:
-        content = (frag.get("content") or "").lower()
+        content = (frag.get("body") or frag.get("raw_text") or "").lower()
         tags = _extract_tags(frag)
         source = (frag.get("source") or "").lower()
         ctx = (frag.get("context") or frag.get("note") or "").lower()
 
-        # -----------------------------
-        # Intensity (if present)
-        # -----------------------------
         intensity = frag.get("intensity")
         if isinstance(intensity, (int, float)):
             bucket = _bucket_intensity(intensity)
             intensity_counter[bucket] += 1
 
-        # -----------------------------
-        # Trigger detection — tags
-        # -----------------------------
         for t in tags:
             if t in FRISSON_TAG_HINTS:
                 trigger_counter[t] += 1
 
-        # -----------------------------
-        # Trigger detection — phrases
-        # -----------------------------
         for phrase in FRISSON_PHRASES:
             if phrase in content:
                 trigger_counter[phrase] += 1
 
-        # -----------------------------
-        # Context detection
-        # -----------------------------
         if "music" in source or "track" in content or "album" in content:
             context_counter["music"] += 1
         if "mountain" in content or "ridge" in content or "summit" in content:
@@ -91,9 +72,6 @@ def analyze_frisson_fragments(fragments: List[Fragment]) -> Dict[str, Any]:
         if ctx:
             context_counter["other"] += 1
 
-    # -----------------------------
-    # Build outputs
-    # -----------------------------
     intensity_profile = [
         {"bucket": b, "count": c} for b, c in sorted(intensity_counter.items())
     ]
@@ -104,15 +82,10 @@ def analyze_frisson_fragments(fragments: List[Fragment]) -> Dict[str, Any]:
         {"context": k, "count": v} for k, v in context_counter.most_common(10)
     ]
 
-    clues = _build_clues(intensity_profile, triggers, contexts)
-    summary = _build_summary(intensity_profile, triggers, contexts)
-
     return {
-        "summary": summary,
         "intensity_profile": intensity_profile,
         "triggers": triggers,
         "contexts": contexts,
-        "clues": clues,
     }
 
 
@@ -121,12 +94,6 @@ def analyze_frisson_fragments(fragments: List[Fragment]) -> Dict[str, Any]:
 # ============================================================
 
 def _extract_tags(frag: Fragment) -> List[str]:
-    """
-    Normalize tags:
-    - strings
-    - PhoenixTag objects
-    - mixed lists
-    """
     raw = frag.get("tags", [])
     tags: List[str] = []
 
@@ -134,29 +101,21 @@ def _extract_tags(frag: Fragment) -> List[str]:
         name = raw.get("tag_name") or raw.get("name")
         if name:
             tags.append(str(name))
-
     elif isinstance(raw, list):
         for t in raw:
             if isinstance(t, dict):
                 name = t.get("tag_name") or t.get("name")
                 if name:
                     tags.append(str(name))
-                    # Continue list handling
             else:
                 tags.append(str(t))
-
-    # Case 3: single string
     elif isinstance(raw, str):
         tags.append(raw)
 
-    # Always return a list
     return [t.lower() for t in tags if t]
 
 
 def _bucket_intensity(value: float) -> str:
-    """
-    Convert numeric intensity into human-readable buckets.
-    """
     if value >= 8:
         return "peak"
     if value >= 5:
@@ -166,91 +125,24 @@ def _bucket_intensity(value: float) -> str:
     return "subtle"
 
 
-def _build_clues(
-    intensity_profile: List[Dict[str, Any]],
-    triggers: List[Dict[str, Any]],
-    contexts: List[Dict[str, Any]],
-) -> List[Dict[str, Any]]:
-    """
-    Build frisson clues from intensity, triggers, and contexts.
-    """
-
-    clues = []
-
-    # Intensity clues
-    for item in intensity_profile:
-        clues.append({
-            "type": "intensity",
-            "bucket": item["bucket"],
-            "count": item["count"],
-        })
-
-    # Trigger clues
-    for trig in triggers:
-        clues.append({
-            "type": "trigger",
-            "trigger": trig["trigger"],
-            "count": trig["count"],
-        })
-
-    # Context clues
-    for ctx in contexts:
-        clues.append({
-            "type": "context",
-            "context": ctx["context"],
-            "count": ctx["count"],
-        })
-
-    return clues
-
-
-def _build_summary(
-    intensity_profile: List[Dict[str, Any]],
-    triggers: List[Dict[str, Any]],
-    contexts: List[Dict[str, Any]],
-) -> str:
-    """
-    Build a human-readable summary of frisson activity.
-    """
-
-    parts = []
-
-    if intensity_profile:
-        parts.append(f"⚡ {len(intensity_profile)} intensity signals")
-
-    if triggers:
-        parts.append(f"🎯 {len(triggers)} triggers detected")
-
-    if contexts:
-        parts.append(f"🌍 {len(contexts)} contexts involved")
-
-    if not parts:
-        return "⚡ No frisson traces found."
-
-    return " | ".join(parts)
-
-from phoenix_portfolio.backend.mongo_client import db
-
 def analyze_frisson(user_id: str) -> Dict[str, Any]:
     """
     State-engine wrapper for analyze_frisson_fragments.
-    Loads emotional_fragments for this user and filters for frisson-related ones.
+    Loads emotional_fragments and filters for frisson-related content,
+    checking the real body/raw_text fields (not legacy 'content').
     """
-    # Load emotional fragments (frisson is a subset of emotional resonance)
     docs = list(
         db["emotional_fragments"]
         .find({"user_id": user_id})
         .sort("timestamp", -1)
     )
 
-    # Filter for fragments that contain frisson hints
     frisson_docs = []
     for d in docs:
-        content = (d.get("content") or "").lower()
+        content = (d.get("body") or d.get("raw_text") or "").lower()
         tags = d.get("tags", [])
         tag_list = []
 
-        # Normalize tags
         if isinstance(tags, list):
             for t in tags:
                 if isinstance(t, dict):
@@ -266,11 +158,9 @@ def analyze_frisson(user_id: str) -> Dict[str, Any]:
         elif isinstance(tags, str):
             tag_list.append(tags.lower())
 
-        # Check for frisson signals
         if any(hint in content for hint in FRISSON_TAG_HINTS) or any(
             hint in tag_list for hint in FRISSON_TAG_HINTS
         ):
             frisson_docs.append(d)
 
     return analyze_frisson_fragments(frisson_docs)
-

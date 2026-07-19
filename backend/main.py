@@ -1,6 +1,6 @@
 # phoenix_portfolio/backend/main.py
 # PhoenixOS Emotional Engine
-
+from phoenix_portfolio.backend.routes.classifier_routes import router as classifier_router
 from fastapi import FastAPI
 from dotenv import load_dotenv
 from pathlib import Path
@@ -19,7 +19,7 @@ settings = Settings()
 
 # --- FastAPI app ---
 app = FastAPI(title="PhoenixOS Emotional Engine")
-
+app.include_router(classifier_router)
 # --- Load environment ---
 ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(dotenv_path=str(ENV_PATH))
@@ -55,9 +55,8 @@ from phoenix_portfolio.backend.routes.anti_grind_routes import router as anti_gr
 from phoenix_portfolio.backend.routes.mirror_routes import router as mirror_router
 from phoenix_portfolio.backend.routes.emerge_routes import router as emerge_router
 from phoenix_portfolio.backend.routes.threshold_guard_routes import router as threshold_guard_router
-from phoenix_portfolio.backend.routes.rituals_fragments import router as rituals_fragments_router
 from phoenix_portfolio.backend.routes import phoenix_state_routes
-from phoenix_portfolio.backend.routes import dashboard_routes
+
 
 # --- NEW: Unified Ingestion Router ---
 from phoenix_portfolio.backend.routes.unified_ingestion_routes import router as unified_router
@@ -73,7 +72,6 @@ app.include_router(anti_grind_router, prefix="/anti-grind", tags=["anti-grind"])
 app.include_router(mirror_router, prefix="/mirror", tags=["mirror"])
 app.include_router(emerge_router, prefix="/emerge", tags=["emerge"])
 app.include_router(threshold_guard_router, prefix="/threshold-guard", tags=["threshold-guard"])
-app.include_router(rituals_fragments_router)
 
 # --- Unified Ingestion (PhoenixOS v1) ---
 app.include_router(unified_router)
@@ -82,7 +80,7 @@ app.include_router(unified_router)
 app.include_router(phoenix_state_routes.router)
 
 # --- Dashboard ---
-app.include_router(dashboard_routes.router)
+
 
 # --- Token ---
 app.include_router(token_router)
@@ -100,4 +98,3 @@ if settings.VALHALLA_ENABLED:
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "phoenix_emotional_engine"}
-

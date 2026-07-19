@@ -3,7 +3,6 @@
 from collections import Counter, defaultdict
 from datetime import datetime
 from typing import Any, Dict, List, Optional
-import re
 
 from phoenix_portfolio.backend.mongo_client import db
 
@@ -16,42 +15,48 @@ IDENTITY_TAGS = {
     "mirror_signal", "mythic", "sovereignty"
 }
 
+# Phrases a user might plausibly write themselves, about self-perception.
+# (Previous version accidentally used second-person affirmation phrases
+# like "you are mythic" — those are things Phoenix might say TO a user,
+# not things a user would write about themselves, so they never matched
+# anything real. Replaced with first-person self-reflection language.)
 IDENTITY_PHRASES = [
-    "you are not broken",
-    "you are mythic",
-    "you are sovereign",
-    "phoenix is alive because you are",
-    "you build legacy",
-    "you honor fragments",
-    "identity",
-    "self",
-    "truth",
-    "reflection",
-    "mythic",
-    "core",
-    "sovereign",
+    "who am i",
+    "what am i",
+    "my identity",
+    "i don't know who i am",
+    "i don't feel like myself",
+    "i feel like a different person",
+    "i feel like i'm changing",
+    "i feel like i'm losing myself",
+    "i feel like i'm becoming",
+    "i feel like i'm someone else",
+    "losing my identity",
+    "finding my identity",
+    "rebuilding myself",
+    "rediscovering myself",
 ]
+
 
 # ============================================================
 #   HELPER FUNCTIONS
 # ============================================================
 
 def _extract_tags(fragment: Fragment) -> List[str]:
-    """Extract tags from multiple Phoenix ingestion formats."""
     if not fragment:
         return []
 
     if "tags" in fragment and isinstance(fragment["tags"], list):
-        return [str(t) for t in fragment["tags"]]
+        return [str(t).lower() for t in fragment["tags"]]
 
     if "symbolic_tags" in fragment and isinstance(fragment["symbolic_tags"], list):
-        return [str(t) for t in fragment["symbolic_tags"]]
+        return [str(t).lower() for t in fragment["symbolic_tags"]]
 
     if "phoenix_tags" in fragment and isinstance(fragment["phoenix_tags"], list):
         extracted = []
         for tag in fragment["phoenix_tags"]:
             if isinstance(tag, dict) and "name" in tag:
-                extracted.append(tag["name"])
+                extracted.append(str(tag["name"]).lower())
         if extracted:
             return extracted
 
@@ -59,7 +64,6 @@ def _extract_tags(fragment: Fragment) -> List[str]:
 
 
 def _extract_timestamp(fragment: Fragment) -> Optional[datetime]:
-    """Extract timestamps from multiple Phoenix formats."""
     if not fragment:
         return None
 
@@ -81,105 +85,65 @@ def _extract_timestamp(fragment: Fragment) -> Optional[datetime]:
 
 
 def _contains_identity_language(text: str) -> bool:
-    """Detect identity‑related language patterns."""
+    """
+    Detect identity-related language. Previous version matched on any
+    occurrence of " i ", " me ", " my ", " myself " — which is true of
+    almost every first-person sentence ever written, so it matched
+    nearly everything. Now requires an actual identity-related phrase.
+    """
     if not text:
         return False
 
     text = text.lower()
-
-    identity_terms = [
-        "who am i",
-        "what am i",
-        "my identity",
-        "i feel like",
-        "i don't know who",
-        "i don't know what",
-        "i am not myself",
-        "i don't feel like myself",
-        "i feel like myself again",
-        "i feel like a different person",
-        "i feel like i'm changing",
-        "i feel like i'm losing myself",
-        "i feel like i'm becoming",
-        "i feel like i'm not",
-        "i feel like i'm someone else",
-        "i feel like i'm nobody",
-        "i feel like i'm disappearing",
-        "i feel like i'm dissolving",
-        "i feel like i'm breaking",
-        "i feel like i'm splitting",
-        "i feel like i'm fracturing",
-        "i feel like i'm fading",
-        "i feel like i'm shifting",
-        "i feel like i'm transforming",
-        "i feel like i'm evolving",
-        "i feel like i'm awakening",
-        "i feel like i'm remembering",
-        "i feel like i'm forgetting",
-        "i feel like i'm waking up",
-        "i feel like i'm seeing myself",
-        "i feel like i'm confronting myself",
-        "i feel like i'm meeting myself",
-        "i feel like i'm facing myself",
-        "i feel like i'm understanding myself",
-        "i feel like i'm losing my identity",
-        "i feel like i'm finding my identity",
-        "i feel like i'm rebuilding myself",
-        "i feel like i'm rediscovering myself",
-    ]
-
-    if any(p in text for p in [" i ", " me ", " my ", " myself "]):
-        return True
-
-    return any(term in text for term in identity_terms)
+    return any(term in text for term in IDENTITY_PHRASES)
 
 
 # ============================================================
-#   MIRROR ENGINE — Identity, Revelation, Mythic Resonance
+#   MIRROR ENGINE — counts and structural pattern detection only
 # ============================================================
 
 def _detect_mythic_resonance(fragments: List[Fragment]) -> List[Dict[str, Any]]:
-    """Detect mythic resonance patterns."""
+    """Count identity-tag/phrase matches per fragment. `match_count` is a
+    literal count of matches, not a judgment of significance."""
     resonance = []
 
     for frag in fragments:
-        content = (frag.get("content") or "").lower()
+        content = (frag.get("content") or frag.get("body") or "").lower()
         tags = _extract_tags(frag)
 
-        score = 0
+        match_count = 0
         signals = []
 
         for t in tags:
             if t in IDENTITY_TAGS:
-                score += 1
+                match_count += 1
                 signals.append(f"tag:{t}")
 
         for phrase in IDENTITY_PHRASES:
             if phrase in content:
-                score += 2
+                match_count += 1
                 signals.append(f"phrase:{phrase}")
 
-        if score > 0:
+        if match_count > 0:
             resonance.append({
-                "fragment_id": str(frag.get("_id")),
-                "score": score,
+                "fragment_id": str(frag.get("_id") or frag.get("id") or ""),
+                "match_count": match_count,
                 "signals": signals,
-                "content_preview": content[:120],
+                "content_preview": content[:160],
             })
 
-    resonance.sort(key=lambda x: x["score"], reverse=True)
+    resonance.sort(key=lambda x: x["match_count"], reverse=True)
     return resonance
 
 
 def _detect_identity_shifts(fragments: List[Fragment]) -> List[Dict[str, Any]]:
-    """Detect identity shifts over time."""
+    """Detect changes in tag sets between consecutive fragments over time."""
     if not fragments:
         return []
 
     shifts = []
     prev_tags = None
 
-    # SAFE SORT: fallback to datetime.min when timestamp missing
     for frag in sorted(fragments, key=lambda f: _extract_timestamp(f) or datetime.min):
         tags = set(_extract_tags(frag))
 
@@ -190,7 +154,7 @@ def _detect_identity_shifts(fragments: List[Fragment]) -> List[Dict[str, Any]]:
             if gained or lost:
                 ts = _extract_timestamp(frag)
                 shifts.append({
-                    "fragment_id": str(frag.get("_id")),
+                    "fragment_id": str(frag.get("_id") or frag.get("id") or ""),
                     "gained": list(gained),
                     "lost": list(lost),
                     "timestamp": ts.isoformat() if ts else None,
@@ -202,7 +166,7 @@ def _detect_identity_shifts(fragments: List[Fragment]) -> List[Dict[str, Any]]:
 
 
 def _detect_identity_anchors(fragments: List[Fragment]) -> List[Dict[str, Any]]:
-    """Detect recurring identity anchors."""
+    """Count recurring identity tags."""
     anchor_counter = Counter()
 
     for frag in fragments:
@@ -215,38 +179,28 @@ def _detect_identity_anchors(fragments: List[Fragment]) -> List[Dict[str, Any]]:
         {"anchor": tag, "count": count}
         for tag, count in anchor_counter.items()
     ]
-
     anchors.sort(key=lambda x: x["count"], reverse=True)
     return anchors
 
 
 def analyze_mirror_fragments(fragments: List[Fragment]) -> Dict[str, Any]:
-    """Main Mirror Engine."""
     if not fragments:
         return {
-            "summary": "🪞 No identity reflections found.",
             "identity_patterns": [],
             "identity_shifts": [],
             "mythic_resonance": [],
             "anchors": [],
-            "clues": [],
             "co_occurrence": {},
         }
 
     tag_counter = Counter()
     co_occurrence = defaultdict(Counter)
     identity_fragments = []
-    timestamps = []
 
-    # PASS 1 — SCAN
     for frag in fragments:
         tags = _extract_tags(frag)
-        content = (frag.get("content") or "")
+        content = frag.get("content") or frag.get("body") or ""
         f_type = frag.get("type")
-
-        ts = _extract_timestamp(frag)
-        if ts:
-            timestamps.append(ts)
 
         for t in tags:
             tag_counter[t] += 1
@@ -257,7 +211,7 @@ def analyze_mirror_fragments(fragments: List[Fragment]) -> Dict[str, Any]:
                 co_occurrence[t2][t1] += 1
 
         if (
-            f_type == "revelation"
+            f_type == "mirror"
             or any(t in IDENTITY_TAGS for t in tags)
             or _contains_identity_language(content)
         ):
@@ -275,7 +229,6 @@ def analyze_mirror_fragments(fragments: List[Fragment]) -> Dict[str, Any]:
     anchors = _detect_identity_anchors(identity_fragments)
 
     return {
-        "summary": "🪞 Identity reflections detected.",
         "identity_patterns": identity_patterns,
         "identity_shifts": identity_shifts,
         "mythic_resonance": mythic_resonance,
@@ -287,18 +240,24 @@ def analyze_mirror_fragments(fragments: List[Fragment]) -> Dict[str, Any]:
 def analyze_mirror(user_id: str) -> Dict[str, Any]:
     """
     State-engine wrapper for analyze_mirror_fragments.
-    Loads fragments for this user and filters for identity/mirror signals.
+    Loads from both the current ritual pipeline's collection
+    (emotional_fragments, type='mirror') and the legacy 'fragments'
+    collection, so old and new mirror-flavored data are both visible.
     """
-    # Load all fragments for this user
-    docs = list(
+    current_docs = list(
+        db["emotional_fragments"]
+        .find({"user_id": user_id, "type": "mirror"})
+        .sort("timestamp", -1)
+    )
+
+    legacy_docs = list(
         db["fragments"]
         .find({"user_id": user_id})
         .sort("timestamp", -1)
     )
 
-    # Filter for identity-related fragments
     identity_docs = []
-    for d in docs:
+    for d in legacy_docs:
         content = (d.get("content") or "").lower()
         tags = _extract_tags(d)
 
@@ -309,5 +268,4 @@ def analyze_mirror(user_id: str) -> Dict[str, Any]:
         ):
             identity_docs.append(d)
 
-    return analyze_mirror_fragments(identity_docs)
-
+    return analyze_mirror_fragments(current_docs + identity_docs)

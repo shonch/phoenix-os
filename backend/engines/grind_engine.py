@@ -12,131 +12,73 @@ Fragment = Dict[str, Any]
 
 
 # ============================================================
-#   GRIND ENGINE — Emotional Fatigue + Override Cycle Detector
+#   GRIND ENGINE — counts and structural pattern detection only
 # ============================================================
 
 def analyze_grind_fragments(fragments: List[Fragment]) -> Dict[str, Any]:
-    """
-    Unified Grind Engine (Phoenix v3):
-    - analyzes grind_scan + grind_override fragments
-    - detects fatigue cycles
-    - detects override cycles
-    - detects grind loops
-    - detects recovery phases
-    - returns both structured JSON and a narrative summary
-    """
-
     if not fragments:
         return {
-            "summary": "No grind-related fragments found. This may be a stable or quiet phase.",
             "patterns": [],
             "fatigue_indicators": [],
             "override_patterns": [],
             "cycles": [],
             "co_occurrence": {},
             "anomalies": [],
-            "emotional_clues": [],
         }
 
-    # -------------------------
-    #   COLLECTIONS
-    # -------------------------
     tag_counter = Counter()
     co_occurrence = defaultdict(Counter)
     scans: List[Fragment] = []
     overrides: List[Fragment] = []
 
-    # -------------------------
-    #   PASS 1 — SCAN FRAGMENTS
-    # -------------------------
     for frag in fragments:
         f_type = (frag.get("type") or "").lower()
 
-        if f_type == "grind_scan":
+        if f_type in ("grind_scan", "grind"):
             scans.append(frag)
-        elif f_type == "grind_override":
+        elif f_type in ("grind_override", "anti_grind"):
             overrides.append(frag)
 
-        # tags (normalized)
         tags = _extract_tags(frag)
         for t in tags:
             tag_counter[t] += 1
 
-        # co-occurrence
         for i, t1 in enumerate(tags):
             for t2 in tags[i + 1:]:
                 co_occurrence[t1][t2] += 1
                 co_occurrence[t2][t1] += 1
 
-    # -------------------------
-    #   PATTERNS
-    # -------------------------
     patterns = [
         {"tag": tag, "count": count}
         for tag, count in tag_counter.most_common(15)
     ]
 
-    # -------------------------
-    #   FATIGUE INDICATORS
-    # -------------------------
     fatigue_indicators = _detect_fatigue(scans)
-
-    # -------------------------
-    #   OVERRIDE PATTERNS
-    # -------------------------
     override_patterns = _detect_overrides(overrides)
-
-    # -------------------------
-    #   CYCLES (grind → override)
-    # -------------------------
     cycles = _detect_cycles(scans, overrides)
 
-    # -------------------------
-    #   CO-OCCURRENCE MAP
-    # -------------------------
     co_map = {
         tag: [{"tag": other, "count": c} for other, c in partners.most_common(10)]
         for tag, partners in co_occurrence.items()
     }
 
-    # -------------------------
-    #   ANOMALIES
-    # -------------------------
     anomalies = _detect_anomalies(scans, overrides)
 
-    # -------------------------
-    #   EMOTIONAL CLUES
-    # -------------------------
-    clues = _build_clues(patterns, fatigue_indicators, override_patterns, cycles)
-
-    # -------------------------
-    #   NARRATIVE SUMMARY
-    # -------------------------
-    summary = _build_summary(clues, fatigue_indicators, override_patterns, cycles)
-
     return {
-        "summary": summary,
         "patterns": patterns,
         "fatigue_indicators": fatigue_indicators,
         "override_patterns": override_patterns,
         "cycles": cycles,
         "co_occurrence": co_map,
         "anomalies": anomalies,
-        "emotional_clues": clues,
     }
 
 
 # ============================================================
-#   HELPERS
+#   HELPERS (unchanged)
 # ============================================================
 
 def _extract_tags(frag: Fragment) -> List[str]:
-    """
-    Normalize tags:
-    - strings
-    - PhoenixTag objects
-    - mixed lists
-    """
     raw = frag.get("tags", [])
     tags: List[str] = []
 
@@ -144,7 +86,6 @@ def _extract_tags(frag: Fragment) -> List[str]:
         name = raw.get("tag_name") or raw.get("name")
         if name:
             tags.append(str(name))
-
     elif isinstance(raw, list):
         for t in raw:
             if isinstance(t, dict):
@@ -153,7 +94,6 @@ def _extract_tags(frag: Fragment) -> List[str]:
                     tags.append(str(name))
             else:
                 tags.append(str(t))
-
     elif isinstance(raw, str):
         tags.append(raw)
 
@@ -172,12 +112,6 @@ def _parse_ts(value: Any) -> Optional[datetime]:
 
 
 def _extract_timestamp(frag: Fragment) -> Optional[datetime]:
-    """
-    Normalize timestamps:
-    - timestamp (ingestion wrapper)
-    - date (legacy)
-    - created_at / inserted_at (legacy)
-    """
     for key in ["timestamp", "date", "created_at", "inserted_at"]:
         ts = frag.get(key)
         if not ts:
@@ -189,7 +123,6 @@ def _extract_timestamp(frag: Fragment) -> Optional[datetime]:
 
 
 def _detect_fatigue(scans: List[Fragment]) -> List[Dict[str, Any]]:
-    """Detect low energy, poor sleep, urgency-to-quit patterns."""
     indicators = []
 
     for frag in scans:
@@ -223,7 +156,6 @@ def _detect_fatigue(scans: List[Fragment]) -> List[Dict[str, Any]]:
 
 
 def _detect_overrides(overrides: List[Fragment]) -> List[Dict[str, Any]]:
-    """Detect override actions (pause, playlist, walk, log)."""
     patterns = []
 
     for frag in overrides:
@@ -239,10 +171,8 @@ def _detect_overrides(overrides: List[Fragment]) -> List[Dict[str, Any]]:
 
 
 def _detect_cycles(scans: List[Fragment], overrides: List[Fragment]) -> List[Dict[str, Any]]:
-    """Detect grind → override cycles."""
     cycles: List[Dict[str, Any]] = []
 
-    # Sort by timestamp
     all_events = []
     for f in scans:
         ts = _extract_timestamp(f)
@@ -255,7 +185,6 @@ def _detect_cycles(scans: List[Fragment], overrides: List[Fragment]) -> List[Dic
 
     all_events.sort(key=lambda x: x[0])
 
-    # Look for scan → override sequences
     for i in range(len(all_events) - 1):
         ts1, t1, f1 = all_events[i]
         ts2, t2, f2 = all_events[i + 1]
@@ -285,74 +214,26 @@ def _detect_anomalies(scans: List[Fragment], overrides: List[Fragment]) -> List[
     return anomalies
 
 
-def _build_clues(patterns, fatigue, overrides, cycles) -> List[str]:
-    clues: List[str] = []
-
-    if fatigue:
-        clues.append("Fatigue signals detected — low energy, poor sleep, or urgency to quit.")
-
-    if overrides:
-        clues.append("Override rituals are active — decompression patterns are present.")
-
-    if cycles:
-        clues.append("Grind → Override cycles detected — emotional system is attempting self-correction.")
-
-    if patterns:
-        top = [p["tag"] for p in patterns[:5]]
-        clues.append(f"These grind-related tags keep appearing: {', '.join(top)}.")
-
-    if not clues:
-        clues.append("No strong grind signals detected — this may be a stable or low-intensity phase.")
-
-    return clues
-
-
-def _build_summary(clues, fatigue, overrides, cycles) -> str:
-    """
-    Narrative summary builder for the Grind Engine.
-    Produces a human-readable emotional fatigue overview.
-    """
-
-    lines = ["🛡️ Grind Engine Summary", ""]
-
-    if clues:
-        for c in clues:
-            lines.append(f"• {c}")
-
-    if fatigue:
-        lines.append(f"• {len(fatigue)} fatigue indicators detected.")
-
-    if overrides:
-        lines.append(f"• {len(overrides)} override rituals logged.")
-
-    if cycles:
-        lines.append(f"• {len(cycles)} grind → override cycles detected.")
-
-    if not (clues or fatigue or overrides or cycles):
-        lines.append("• " + " ".join(clues))
-
-    return "\n".join(lines)
-
-
 def analyze_grind(user_id: str) -> Dict[str, Any]:
     """
     State-engine wrapper for analyze_grind_fragments.
-    Loads grind_scan and grind_override fragments for this user.
+    Loads grind/anti_grind fragments from emotional_fragments (the current
+    ritual pipeline's collection), plus legacy grind_scan/grind_override
+    fragments from the old 'fragments' collection, so both old and new
+    data are visible.
     """
-    # Load all fragments for this user, serialized
-    docs = [
+    current_docs = [
         serialize_doc(d)
-        for d in db["fragments"]
-        .find({"user_id": user_id})
+        for d in db["emotional_fragments"]
+        .find({"user_id": user_id, "type": {"$in": ["grind", "anti_grind"]}})
         .sort("timestamp", -1)
     ]
 
-    # Filter for grind-related fragments
-    grind_docs = []
-    for d in docs:
-        f_type = (d.get("type") or "").lower()
-        if f_type in ("grind_scan", "grind_override"):
-            grind_docs.append(d)
+    legacy_docs = [
+        serialize_doc(d)
+        for d in db["fragments"]
+        .find({"user_id": user_id, "type": {"$in": ["grind_scan", "grind_override"]}})
+        .sort("timestamp", -1)
+    ]
 
-    return analyze_grind_fragments(grind_docs)
-
+    return analyze_grind_fragments(current_docs + legacy_docs)

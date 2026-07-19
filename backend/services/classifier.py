@@ -1,61 +1,106 @@
 # phoenix_portfolio/backend/services/classifier.py
 
-"""
-PhoenixOS Ritual Classifier
+import re
 
-This classifier inspects the raw payload and determines which ritual
-builder should be invoked. It returns a string that matches the keys
-in ritual_map.
-"""
+
+def _matches_any(text: str, roots: list[str]) -> bool:
+    """
+    Match if any keyword root appears in the text, regardless of word
+    ending (e.g. "exhaust" matches "exhausted", "exhausting", "exhaustion").
+    """
+    for root in roots:
+        pattern = re.escape(root) + r"\w*"
+        if re.search(pattern, text):
+            return True
+    return False
+
 
 def classify_ritual_type(payload: dict) -> str:
     """
-    Determine ritual type based on the presence of key fields.
-    This is a simple rule-based classifier for PhoenixOS v1.
-
-    The classifier returns one of:
-    - "pulse"
-    - "emotion"
-    - "grind"
-    - "anti_grind"
-    - "detective"
-    - "mirror"
-    - "emerge"
-    - "threshold"
+    PhoenixOS v2.5 Ritual Classifier
+    All branches check actual response text (raw_inputs[0].text), not step
+    labels. Keyword lists use word ROOTS matched via regex, so different
+    conjugations/forms (exhaust/exhausted/exhausting/exhaustion) all match
+    without needing every variant spelled out. Keyword lists are a first
+    pass — tune freely during testing.
     """
 
-    # 1. Pulse
-    if payload.get("raw_fragment") and payload.get("emotion"):
-        return "pulse"
+    fragment = payload.get("fragment", {}) or {}
+    metadata = fragment.get("metadata", {}) or {}
 
-    # 2. Emotion
-    if payload.get("emotion") and payload.get("body"):
-        return "emotion"
+    raw_inputs = metadata.get("raw_inputs", []) or []
+    threshold_type = (metadata.get("threshold_type") or "").lower().strip()
 
-    # 3. Grind
-    if payload.get("task") or payload.get("resistance"):
-        return "grind"
+    opening_text = ""
+    if raw_inputs:
+        opening_text = (raw_inputs[0].get("text") or "").lower().replace("\n", " ").strip()
 
-    # 4. Anti-Grind
-    if payload.get("relief") or payload.get("cause"):
-        return "anti_grind"
+    # ---------------------------------------------------------
+    # 1. THRESHOLD RITUAL (highest priority)
+    # ---------------------------------------------------------
+    threshold_keywords = [
+        "stuck", "between", "crossroad", "choice", "choos", "decid",
+        "path", "torn", "transition", "liminal", "shift", "edge",
+        "threshold"
+    ]
 
-    # 5. Detective
-    if payload.get("clue") or payload.get("insight"):
-        return "detective"
-
-    # 6. Mirror
-    if payload.get("reflection") or payload.get("distortion"):
-        return "mirror"
-
-    # 7. Emerge
-    if payload.get("breakthrough") or payload.get("context"):
-        return "emerge"
-
-    # 8. Threshold
-    if payload.get("boundary") or payload.get("violation"):
+    if threshold_type in ("release", "initiation", "threshold", "transition"):
         return "threshold"
 
-    # Default fallback
-    return "emotion"
+    if opening_text and _matches_any(opening_text, threshold_keywords):
+        return "threshold"
 
+    # ---------------------------------------------------------
+    # 2. PULSE RITUAL
+    # ---------------------------------------------------------
+    pulse_keywords = [
+        "quick", "brief", "checking in", "pulse", "heartbeat", "signal"
+    ]
+
+    if opening_text and _matches_any(opening_text, pulse_keywords):
+        return "pulse"
+
+    # ---------------------------------------------------------
+    # 3. MIRROR RITUAL
+    # ---------------------------------------------------------
+    mirror_keywords = [
+        "reflect", "who am i", "identit", "distort", "myself",
+        "self-image", "contradict"
+    ]
+
+    if opening_text and _matches_any(opening_text, mirror_keywords):
+        return "mirror"
+
+    # ---------------------------------------------------------
+    # 4. GRIND / ANTI-GRIND RITUAL
+    # ---------------------------------------------------------
+    grind_keywords = [
+        "grind", "exhaust", "burn", "burnout", "push", "friction",
+        "resist", "wear", "tire", "strain"
+    ]
+    anti_grind_keywords = [
+        "relief", "reliev", "release", "easy", "rest", "light",
+        "unburden", "at ease", "calm"
+    ]
+
+    if opening_text and _matches_any(opening_text, grind_keywords):
+        return "grind"
+
+    if opening_text and _matches_any(opening_text, anti_grind_keywords):
+        return "anti_grind"
+
+    # ---------------------------------------------------------
+    # 5. DETECTIVE RITUAL
+    # ---------------------------------------------------------
+    detective_keywords = [
+        "clue", "pattern", "investigat", "mystery", "puzzle",
+        "figure out", "connect the dots", "recur"
+    ]
+
+    if opening_text and _matches_any(opening_text, detective_keywords):
+        return "detective"
+
+    # ---------------------------------------------------------
+    # 6. DEFAULT
+    # ---------------------------------------------------------
+    return "emotion"

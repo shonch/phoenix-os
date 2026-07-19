@@ -15,8 +15,8 @@ from phoenix_portfolio.backend.engines.mirror_engine import analyze_mirror
 from phoenix_portfolio.backend.engines.grind_engine import analyze_grind
 from phoenix_portfolio.backend.engines.tag_engine import analyze_tags
 from phoenix_portfolio.backend.engines.classifier_engine import analyze_classifiers
-from phoenix_portfolio.backend.engines.dashboard_engine import analyze_dashboard
-from phoenix_portfolio.backend.engines.phoenix_state_engine import analyze_phoenix_state
+
+
 
 from phoenix_portfolio.backend.modules.symbolic_tag import list_tags
 from phoenix_portfolio.backend.utils.state_serializer import StateSerializer
@@ -87,8 +87,8 @@ def get_state(user=Depends(get_current_user_id), limit: int = 200):
         "grind": analyze_grind(uid),
         "tags": analyze_tags(uid),
         "classifiers": analyze_classifiers(uid),
-        "dashboard": analyze_dashboard(uid),
-        "phoenix_state": analyze_phoenix_state(uid),
+
+
     }
 
     state = {

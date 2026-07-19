@@ -40,6 +40,7 @@ def analyze_thresholds(user_id: str) -> Dict[str, Any]:
         "fatigue_events": len(fatigue),
         "recent_fatigue": [
             {
+                "id": getattr(f, "id", None),
                 "subject": f.subject,
                 "weather": f.weather,
                 "date": f.date_raw,
@@ -47,4 +48,3 @@ def analyze_thresholds(user_id: str) -> Dict[str, Any]:
             for f in fatigue_sorted[:5]
         ],
     }
-

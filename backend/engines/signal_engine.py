@@ -153,26 +153,28 @@ def compute_signals(buckets: Dict[str, List[dict]]) -> Dict[str, Any]:
         "system": system_signals,
     }
 
-
 def analyze_signals(user_id: str) -> Dict[str, Any]:
     """
     State-engine wrapper for compute_signals.
-    Loads fragments from Mongo, buckets them, and computes signals.
+    Loads fragments from all relevant collections (legacy + current
+    ritual pipeline), buckets them by type, and computes signals.
     """
-
-    # Load all fragments for this user, serialized
-    docs = [
-        serialize_doc(d)
-        for d in db["fragments"]
-        .find({"user_id": user_id})
-        .sort("timestamp", -1)
+    collections_to_scan = [
+        "fragments", "emotional_fragments", "revelations", "thresholds", "clues"
     ]
 
-    # Bucket by fragment type
+    docs: List[dict] = []
+    for coll_name in collections_to_scan:
+        docs.extend(
+            serialize_doc(d)
+            for d in db[coll_name]
+            .find({"user_id": user_id})
+            .sort("timestamp", -1)
+        )
+
     buckets: Dict[str, List[dict]] = {}
     for d in docs:
         t = d.get("type") or d.get("fragment_type") or "unknown"
         buckets.setdefault(t, []).append(d)
 
     return compute_signals(buckets)
-

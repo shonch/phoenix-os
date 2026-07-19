@@ -72,7 +72,6 @@ def _analyze_symbols(clues: List[NormalizedFragment]) -> Dict[str, Any]:
     for f in clues:
         tag_names = []
         for t in (f.tags or []):
-            # NormalizedFragment usually has tags as dicts or objects; be defensive
             name = getattr(t, "name", None) or getattr(t, "label", None) or t.get("name") if isinstance(t, dict) else None
             if name:
                 tag_names.append(name)
@@ -81,10 +80,8 @@ def _analyze_symbols(clues: List[NormalizedFragment]) -> Dict[str, Any]:
             if archetype:
                 archetype_counts[archetype] += 1
 
-        # tag frequency
         tag_counts.update(tag_names)
 
-        # co-occurrence pairs
         unique_tags = sorted(set(tag_names))
         for i in range(len(unique_tags)):
             for j in range(i + 1, len(unique_tags)):
@@ -212,7 +209,6 @@ def _link_clues_to_revelations(
                 if name:
                     c_tags.add(name.lower())
 
-            # subject prefix match (Clue: X vs Revelation: X)
             subject_match = False
             if ":" in cs and ":" in rs:
                 c_prefix = cs.split(":", 1)[1].strip()
@@ -220,7 +216,6 @@ def _link_clues_to_revelations(
                 if c_prefix and r_prefix and c_prefix in rs:
                     subject_match = True
 
-            # tag overlap
             tag_overlap = bool(c_tags & r_tags)
 
             if subject_match or tag_overlap:
@@ -236,7 +231,6 @@ def _link_clues_to_revelations(
 def _build_case_files(
     unresolved: List[NormalizedFragment],
 ) -> List[Dict[str, Any]]:
-    # Group unresolved clues by dominant tag (if any)
     clusters: Dict[str, List[NormalizedFragment]] = defaultdict(list)
 
     for c in unresolved:
@@ -274,88 +268,11 @@ def _build_case_files(
                     }
                     for r in recent
                 ],
-                "summary": _summarize_case(key, len(items), dominant_weather),
             }
         )
 
-    # Sort by size descending
     case_files.sort(key=lambda c: c["count"], reverse=True)
     return case_files
-
-
-def _summarize_case(symbol: str, count: int, weather: Optional[str]) -> str:
-    parts = []
-    parts.append(f"There are {count} unresolved clues clustered around '{symbol}'.")
-    if weather:
-        parts.append(f"The emotional weather around this thread tends toward '{weather}'.")
-    parts.append("This thread appears to be asking for attention and integration.")
-    return " ".join(parts)
-
-
-# ---------- Scoring + narrative ----------
-
-def _compute_detective_score(
-    total_clues: int,
-    unresolved_count: int,
-    echo_intensity: int,
-    symbolic_density: int,
-) -> int:
-    # Simple weighted composite, capped at 100
-    if total_clues == 0:
-        return 0
-
-    unresolved_ratio = unresolved_count / max(total_clues, 1)
-    echo_factor = min(echo_intensity, 10) / 10.0
-    symbol_factor = min(symbolic_density, 20) / 20.0
-
-    raw = (
-        40 * unresolved_ratio +
-        30 * echo_factor +
-        30 * symbol_factor
-    )
-    return int(max(0, min(100, round(raw))))
-
-
-def _build_detective_summary(
-    total_clues: int,
-    unresolved_count: int,
-    echo_intensity: int,
-    top_symbols: List[Dict[str, Any]],
-    case_files: List[Dict[str, Any]],
-) -> str:
-    if total_clues == 0:
-        return "No clues have been logged yet. The detective system is idle."
-
-    parts: List[str] = []
-
-    parts.append(
-        f"You have {total_clues} logged clues, with {unresolved_count} still unresolved."
-    )
-
-    if echo_intensity > 0:
-        parts.append(
-            f"There are repeating patterns (echoes) across subjects, tags, or weather, with an echo intensity of {echo_intensity}."
-        )
-
-    if top_symbols:
-        names = [t["tag"] for t in top_symbols[:3]]
-        parts.append(
-            "Symbolically, the most active tags in your clues are: " +
-            ", ".join(names) + "."
-        )
-
-    if case_files:
-        top_case = case_files[0]
-        parts.append(
-            f"One prominent unresolved thread centers on '{top_case['symbol']}', "
-            f"with {top_case['count']} related clues."
-        )
-
-    parts.append(
-        "Taken together, these patterns suggest there are active emotional investigations underway that may benefit from reflection or ritual."
-    )
-
-    return " ".join(parts)
 
 
 # ---------- Public API ----------
@@ -364,7 +281,6 @@ def analyze_detective(user_id: str) -> Dict[str, Any]:
     clues = _load_clues(user_id)
     revelations = _load_revelations(user_id)
 
-    # Group by type
     clues_by_type: Dict[str, List[NormalizedFragment]] = {}
     for f in clues:
         t = _extract_type_from_subject(f.subject, "Clue") or "unknown"
@@ -375,54 +291,21 @@ def analyze_detective(user_id: str) -> Dict[str, Any]:
         t = _extract_type_from_subject(f.subject, "Revelation") or "unknown"
         rev_by_type.setdefault(t, []).append(f)
 
-    # Status classification
     status_counts: Counter[str] = Counter()
     for f in clues:
         status = _status_from_subject(f.subject)
         status_counts[status] += 1
 
-    # Symbolic analysis
     symbols = _analyze_symbols(clues)
-
-    # Weather analysis
     weather = _analyze_weather(clues)
-
-    # Echo detection
     echoes = _detect_echoes(clues)
 
-    # Case linking
     unresolved, resolved = _link_clues_to_revelations(clues, revelations)
-
-    # Case files
     case_files = _build_case_files(unresolved)
 
-    # Score
-    total_clues = len(clues)
-    unresolved_count = len(unresolved)
-    echo_intensity = echoes["intensity"]
-    symbolic_density = symbols["symbolic_density"]
-
-    score = _compute_detective_score(
-        total_clues=total_clues,
-        unresolved_count=unresolved_count,
-        echo_intensity=echo_intensity,
-        symbolic_density=symbolic_density,
-    )
-
-    # Narrative summary
-    summary = _build_detective_summary(
-        total_clues=total_clues,
-        unresolved_count=unresolved_count,
-        echo_intensity=echo_intensity,
-        top_symbols=symbols["top_tags"],
-        case_files=case_files,
-    )
-
     return {
-        "score": score,
-        "summary": summary,
         "clues": {
-            "total": total_clues,
+            "total": len(clues),
             "by_type": {k: len(v) for k, v in clues_by_type.items()},
             "recent": _recent(clues),
             "status": {
@@ -441,9 +324,8 @@ def analyze_detective(user_id: str) -> Dict[str, Any]:
         "weather": weather,
         "echoes": echoes,
         "cases": {
-            "unresolved_count": unresolved_count,
+            "unresolved_count": len(unresolved),
             "resolved_count": len(resolved),
             "files": case_files,
         },
     }
-
