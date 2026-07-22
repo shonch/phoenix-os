@@ -6,10 +6,10 @@ from dotenv import load_dotenv
 from pathlib import Path
 import os
 from pymongo import MongoClient
-
+from phoenix_portfolio.backend.routes.tag_routes import router as tag_router
 from pydantic_settings import BaseSettings
 from fastapi.middleware.cors import CORSMiddleware
-
+from phoenix_portfolio.backend.routes.auth_routes import router as auth_router
 
 # --- Feature flag for Valhalla ---
 class Settings(BaseSettings):
@@ -44,47 +44,25 @@ app.add_middleware(
 )
 
 # --- Import PhoenixOS routers (Emotional Engine) ---
-from phoenix_portfolio.backend.routes.emotion_routes import router as emotion_router
-from phoenix_portfolio.backend.routes.search_routes import router as search_router
 from phoenix_portfolio.backend.routes.token_routes import router as token_router
-from phoenix_portfolio.backend.routes.pulse_routes import router as pulse_router
-from phoenix_portfolio.backend.routes.delete_log_routes import router as delete_log_router
-from phoenix_portfolio.backend.routes.detective_routes import router as detective_router
-from phoenix_portfolio.backend.routes.grind_protocol_routes import router as grind_router
-from phoenix_portfolio.backend.routes.anti_grind_routes import router as anti_grind_router
-from phoenix_portfolio.backend.routes.mirror_routes import router as mirror_router
-from phoenix_portfolio.backend.routes.emerge_routes import router as emerge_router
-from phoenix_portfolio.backend.routes.threshold_guard_routes import router as threshold_guard_router
 from phoenix_portfolio.backend.routes import phoenix_state_routes
-
 
 # --- NEW: Unified Ingestion Router ---
 from phoenix_portfolio.backend.routes.unified_ingestion_routes import router as unified_router
 
 # --- Include routers ---
-app.include_router(emotion_router)
-app.include_router(search_router, prefix="/search", tags=["search"])
-app.include_router(pulse_router, prefix="/pulse", tags=["pulse"])
-app.include_router(delete_log_router, prefix="/logs", tags=["logs"])
-app.include_router(detective_router, prefix="/detective", tags=["detective"])
-app.include_router(grind_router, prefix="/grind", tags=["grind"])
-app.include_router(anti_grind_router, prefix="/anti-grind", tags=["anti-grind"])
-app.include_router(mirror_router, prefix="/mirror", tags=["mirror"])
-app.include_router(emerge_router, prefix="/emerge", tags=["emerge"])
-app.include_router(threshold_guard_router, prefix="/threshold-guard", tags=["threshold-guard"])
-
 # --- Unified Ingestion (PhoenixOS v1) ---
 app.include_router(unified_router)
 
 # --- Unified Phoenix State ---
 app.include_router(phoenix_state_routes.router)
 
-# --- Dashboard ---
 
+# --- Tags ---
+app.include_router(tag_router)
 
-# --- Token ---
-app.include_router(token_router)
-
+#authorization 
+app.include_router(auth_router)
 # --- Try to import Valhalla (optional) ---
 if settings.VALHALLA_ENABLED:
     try:
