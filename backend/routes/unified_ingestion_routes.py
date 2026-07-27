@@ -1,10 +1,10 @@
 # phoenix_portfolio/backend/routes/unified_ingestion_routes.py
 
 from fastapi import APIRouter, HTTPException, Depends
-from phoenix_portfolio.backend.services.ingestion import ingest_fragment
-from phoenix_portfolio.backend.rituals.ritual_map import ritual_map
-from phoenix_portfolio.backend.schemas.api_fragments import FragmentLogRequest
-from phoenix_portfolio.phoenix_platform.auth import verify_token
+from backend.services.ingestion import ingest_fragment
+from backend.rituals.ritual_map import ritual_map
+from backend.schemas.api_fragments import FragmentLogRequest
+from phoenix_platform.auth import verify_token
 
 router = APIRouter(prefix="/rituals", tags=["Unified Ritual Ingestion"])
 

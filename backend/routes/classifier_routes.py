@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from phoenix_portfolio.backend.services.classifier import classify_ritual_type
+from backend.services.classifier import classify_ritual_type
 
 router = APIRouter(prefix="/rituals", tags=["Ritual Classification"])
 

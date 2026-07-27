@@ -2,8 +2,8 @@ from fastapi import APIRouter, HTTPException
 from datetime import datetime
 from bson import ObjectId
 
-from phoenix_portfolio.backend.db import db
-from phoenix_portfolio.backend.rituals.ritual_map import ritual_map
+from backend.db import db
+from backend.rituals.ritual_map import ritual_map
 
 router = APIRouter(prefix="/rituals", tags=["rituals"])
 

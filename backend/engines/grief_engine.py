@@ -3,8 +3,8 @@
 from datetime import datetime
 from typing import Any, Dict, List
 
-from phoenix_portfolio.backend.mongo_client import db
-from phoenix_portfolio.backend.utils.adapter import (
+from backend.mongo_client import db
+from backend.utils.adapter import (
     NormalizedFragment,
     normalize_fragment,
 )

@@ -3,7 +3,7 @@
 from collections import Counter
 from typing import Any, Dict, List
 
-from phoenix_portfolio.backend.mongo_client import db
+from backend.mongo_client import db
 
 Fragment = Dict[str, Any]
 

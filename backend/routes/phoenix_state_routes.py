@@ -1,25 +1,25 @@
 from fastapi import APIRouter, Depends
-from phoenix_portfolio.backend.mongo_client import db
-from phoenix_portfolio.phoenix_platform.auth import verify_token
+from backend.mongo_client import db
+from phoenix_platform.auth import verify_token
 
 # --- EXISTING ENGINES ---
-from phoenix_portfolio.backend.engines.grief_engine import analyze_grief
-from phoenix_portfolio.backend.engines.threshold_emerge_engine import analyze_thresholds
-from phoenix_portfolio.backend.engines.detective_engine import analyze_detective
+from backend.engines.grief_engine import analyze_grief
+from backend.engines.threshold_emerge_engine import analyze_thresholds
+from backend.engines.detective_engine import analyze_detective
 
 # --- NEW ENGINES (FULL BRAIN ACTIVATION) ---
-from phoenix_portfolio.backend.engines.emotion_engine import analyze_emotion
-from phoenix_portfolio.backend.engines.signal_engine import analyze_signals
-from phoenix_portfolio.backend.engines.frisson_engine import analyze_frisson
-from phoenix_portfolio.backend.engines.mirror_engine import analyze_mirror
-from phoenix_portfolio.backend.engines.grind_engine import analyze_grind
-from phoenix_portfolio.backend.engines.tag_engine import analyze_tags
-from phoenix_portfolio.backend.engines.classifier_engine import analyze_classifiers
+from backend.engines.emotion_engine import analyze_emotion
+from backend.engines.signal_engine import analyze_signals
+from backend.engines.frisson_engine import analyze_frisson
+from backend.engines.mirror_engine import analyze_mirror
+from backend.engines.grind_engine import analyze_grind
+from backend.engines.tag_engine import analyze_tags
+from backend.engines.classifier_engine import analyze_classifiers
 
 
 
-from phoenix_portfolio.backend.modules.symbolic_tag import list_tags
-from phoenix_portfolio.backend.utils.state_serializer import StateSerializer
+from backend.modules.symbolic_tag import list_tags
+from backend.utils.state_serializer import StateSerializer
 
 
 router = APIRouter(prefix="/phoenix/state", tags=["Phoenix State"])

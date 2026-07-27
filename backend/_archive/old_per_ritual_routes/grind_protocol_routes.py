@@ -1,16 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException
 from datetime import datetime
 
-from phoenix_portfolio.backend.schemas.grind_protocol import (
+from backend.schemas.grind_protocol import (
     GrindScanCreate,
     GrindScanResponse,
 )
-from phoenix_portfolio.backend.schemas.api_fragments import (
+from backend.schemas.api_fragments import (
     FragmentLogRequest,
     FragmentResponse,
 )
-from phoenix_portfolio.backend.services.ingestion import ingest_fragment
-from phoenix_portfolio.phoenix_platform.auth import verify_token
+from backend.services.ingestion import ingest_fragment
+from phoenix_platform.auth import verify_token
 
 router = APIRouter(prefix="/grind", tags=["Grind Protocol"])
 
@@ -82,7 +82,7 @@ def list_scans(user=Depends(get_current_user_id)):
     Legacy-compatible listing of grind scans.
     """
     try:
-        from phoenix_portfolio.backend.mongo_client import db
+        from backend.mongo_client import db
         docs = list(
             db["emotional_fragments"].find({
                 "type": "grind_scan",
@@ -101,7 +101,7 @@ def get_scan(id: str, user=Depends(get_current_user_id)):
     """
     try:
         from bson import ObjectId
-        from phoenix_portfolio.backend.mongo_client import db
+        from backend.mongo_client import db
 
         doc = db["emotional_fragments"].find_one({
             "_id": ObjectId(id),

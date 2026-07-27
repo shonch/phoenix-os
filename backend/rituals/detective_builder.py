@@ -1,7 +1,7 @@
 # phoenix_portfolio/backend/rituals/detective_builder.py
 
-from phoenix_portfolio.backend.schemas.api_fragments import FragmentLogRequest, Tag
-from phoenix_portfolio.backend.modules.symbolic_tag import _normalize_legacy_fields
+from backend.schemas.api_fragments import FragmentLogRequest, Tag
+from backend.modules.symbolic_tag import _normalize_legacy_fields
 from datetime import datetime
 
 def build_detective_fragment(payload: dict) -> FragmentLogRequest:

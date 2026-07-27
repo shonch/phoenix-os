@@ -1,15 +1,15 @@
 # phoenix_portfolio/backend/main.py
 # PhoenixOS Emotional Engine
-from phoenix_portfolio.backend.routes.classifier_routes import router as classifier_router
+from backend.routes.classifier_routes import router as classifier_router
 from fastapi import FastAPI
 from dotenv import load_dotenv
 from pathlib import Path
 import os
 from pymongo import MongoClient
-from phoenix_portfolio.backend.routes.tag_routes import router as tag_router
+from backend.routes.tag_routes import router as tag_router
 from pydantic_settings import BaseSettings
 from fastapi.middleware.cors import CORSMiddleware
-from phoenix_portfolio.backend.routes.auth_routes import router as auth_router
+from backend.routes.auth_routes import router as auth_router
 
 # --- Feature flag for Valhalla ---
 class Settings(BaseSettings):
@@ -44,11 +44,11 @@ app.add_middleware(
 )
 
 # --- Import PhoenixOS routers (Emotional Engine) ---
-from phoenix_portfolio.backend.routes.token_routes import router as token_router
-from phoenix_portfolio.backend.routes import phoenix_state_routes
+from backend.routes.token_routes import router as token_router
+from backend.routes import phoenix_state_routes
 
 # --- NEW: Unified Ingestion Router ---
-from phoenix_portfolio.backend.routes.unified_ingestion_routes import router as unified_router
+from backend.routes.unified_ingestion_routes import router as unified_router
 
 # --- Include routers ---
 # --- Unified Ingestion (PhoenixOS v1) ---

@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from datetime import datetime
 
-from phoenix_portfolio.backend.schemas.grind import GrindCreate
-from phoenix_portfolio.backend.schemas.api_fragments import FragmentLogRequest, FragmentResponse
-from phoenix_portfolio.backend.services.ingestion import ingest_fragment
-from phoenix_portfolio.phoenix_platform.auth import verify_token
+from backend.schemas.grind import GrindCreate
+from backend.schemas.api_fragments import FragmentLogRequest, FragmentResponse
+from backend.services.ingestion import ingest_fragment
+from phoenix_platform.auth import verify_token
 
 router = APIRouter(prefix="/grind", tags=["Grind"])
 

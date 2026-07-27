@@ -4,7 +4,7 @@ from collections import Counter, defaultdict
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from phoenix_portfolio.backend.mongo_client import db
+from backend.mongo_client import db
 
 Fragment = Dict[str, Any]
 
@@ -236,14 +236,20 @@ def analyze_mirror_fragments(fragments: List[Fragment]) -> Dict[str, Any]:
         "co_occurrence": {k: dict(v) for k, v in co_occurrence.items()},
     }
 
-
 def analyze_mirror(user_id: str) -> Dict[str, Any]:
     """
     State-engine wrapper for analyze_mirror_fragments.
-    Loads from both the current ritual pipeline's collection
-    (emotional_fragments, type='mirror') and the legacy 'fragments'
-    collection, so old and new mirror-flavored data are both visible.
+    Mirror fragments are stored in the 'revelations' collection
+    (mirror_builder.py sets layer="revelation"), plus we also check
+    emotional_fragments (type='mirror', in case that ever changes) and
+    the legacy 'fragments' collection for old identity-flavored data.
     """
+    revelations_docs = list(
+        db["revelations"]
+        .find({"user_id": user_id})
+        .sort("timestamp", -1)
+    )
+
     current_docs = list(
         db["emotional_fragments"]
         .find({"user_id": user_id, "type": "mirror"})
@@ -256,7 +262,7 @@ def analyze_mirror(user_id: str) -> Dict[str, Any]:
         .sort("timestamp", -1)
     )
 
-    identity_docs = []
+    identity_legacy_docs = []
     for d in legacy_docs:
         content = (d.get("content") or "").lower()
         tags = _extract_tags(d)
@@ -266,6 +272,6 @@ def analyze_mirror(user_id: str) -> Dict[str, Any]:
             or _contains_identity_language(content)
             or d.get("type") == "revelation"
         ):
-            identity_docs.append(d)
+            identity_legacy_docs.append(d)
 
-    return analyze_mirror_fragments(current_docs + identity_docs)
+    return analyze_mirror_fragments(revelations_docs + current_docs + identity_legacy_docs)

@@ -2,8 +2,8 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from phoenix_portfolio.phoenix_platform.auth import verify_token
-from phoenix_portfolio.backend.modules import symbolic_tag
+from phoenix_platform.auth import verify_token
+from backend.modules import symbolic_tag
 
 router = APIRouter(prefix="/tags", tags=["Tags"])
 

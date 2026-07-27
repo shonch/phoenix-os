@@ -4,8 +4,8 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 from collections import Counter, defaultdict
 
-from phoenix_portfolio.backend.mongo_client import db
-from phoenix_portfolio.backend.utils.adapter import (
+from backend.mongo_client import db
+from backend.utils.adapter import (
     NormalizedFragment,
     normalize_fragment,
 )

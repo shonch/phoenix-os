@@ -1,4 +1,4 @@
-from phoenix_portfolio.phoenix_platform.auth import create_access_token
+from phoenix_platform.auth import create_access_token
 from datetime import timedelta
 import base64
 

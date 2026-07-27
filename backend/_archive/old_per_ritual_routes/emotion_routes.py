@@ -4,22 +4,22 @@ from fastapi import APIRouter, Depends, HTTPException
 from datetime import datetime
 from bson import ObjectId
 
-from phoenix_portfolio.backend.schemas.emotion import (
+from backend.schemas.emotion import (
     EmotionLogCreate,
     EmotionLogResponse,
 )
-from phoenix_portfolio.backend.mongo_client import db
-from phoenix_portfolio.backend.modules.symbolic_tag import (
+from backend.mongo_client import db
+from backend.modules.symbolic_tag import (
     normalize_tag,
     suggest_tags,
     create_tag,
 )
-from phoenix_portfolio.backend.utils.serialization import (
+from backend.utils.serialization import (
     serialize_doc,
     serialize_docs,
 )
 
-from phoenix_portfolio.phoenix_platform.auth import verify_token
+from phoenix_platform.auth import verify_token
 
 router = APIRouter(prefix="/emotions", tags=["Emotions"])
 

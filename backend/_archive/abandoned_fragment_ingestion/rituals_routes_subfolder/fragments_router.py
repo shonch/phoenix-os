@@ -6,8 +6,8 @@ from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Query
 from bson import ObjectId
 
-from phoenix_portfolio.backend.mongo_client import db
-from phoenix_portfolio.backend.schemas.fragments import Fragment
+from backend.mongo_client import db
+from backend.schemas.fragments import Fragment
 
 router = APIRouter(tags=["fragments"])
 

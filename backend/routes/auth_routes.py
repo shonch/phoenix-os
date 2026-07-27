@@ -5,8 +5,8 @@ from pydantic import BaseModel, EmailStr
 from passlib.context import CryptContext
 from datetime import datetime
 
-from phoenix_portfolio.backend.mongo_client import db
-from phoenix_portfolio.phoenix_platform.auth import create_access_token
+from backend.mongo_client import db
+from phoenix_platform.auth import create_access_token
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 

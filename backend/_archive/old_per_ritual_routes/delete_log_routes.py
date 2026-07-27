@@ -5,12 +5,12 @@ from datetime import datetime
 from bson import ObjectId
 
 # Corrected imports for the new project structure
-from phoenix_portfolio.backend.mongo_client import db
-from phoenix_portfolio.backend.schemas.delete_log import (
+from backend.mongo_client import db
+from backend.schemas.delete_log import (
     DeleteLogCreate,
     DeleteLogResponse,
 )
-from phoenix_portfolio.backend.utils.serialization import (
+from backend.utils.serialization import (
     serialize_doc,
     serialize_docs,
 )

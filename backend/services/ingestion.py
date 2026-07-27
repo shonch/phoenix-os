@@ -1,17 +1,17 @@
 from datetime import datetime
 from typing import List, Union
 
-from phoenix_portfolio.backend.mongo_client import db
-from phoenix_portfolio.backend.utils.serialization import serialize_doc
+from backend.mongo_client import db
+from backend.utils.serialization import serialize_doc
 
-from phoenix_portfolio.backend.schemas.api_fragments import (
+from backend.schemas.api_fragments import (
     FragmentLogRequest,
     FragmentResponse,
     Tag,
 )
 
-from phoenix_portfolio.phoenix_engine.models.tag import PhoenixTag
-from phoenix_portfolio.backend.modules import symbolic_tag
+from phoenix_engine.models.tag import PhoenixTag
+from backend.modules import symbolic_tag
 
 
 def _resolve_collection(layer: str) -> str:
@@ -95,7 +95,7 @@ def ingest_fragment(req: FragmentLogRequest, user_id: str) -> FragmentResponse:
         "subject": req.subject,
         "raw_text": req.raw_text,
         "body": req.body,
-        "tags": [t.name for t in phoenix_tags],
+        "tags": [t.dict() for t in phoenix_tags],
         "timestamp": now,
         "date": now.date().isoformat(),
         "source_system": source_system,

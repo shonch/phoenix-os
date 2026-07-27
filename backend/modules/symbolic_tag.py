@@ -7,7 +7,7 @@ from bson import ObjectId
 from dotenv import load_dotenv
 from pymongo import MongoClient
 
-from phoenix_portfolio.phoenix_engine.models.tag import PhoenixTag
+from phoenix_engine.models.tag import PhoenixTag
 
 
 # -----------------------------

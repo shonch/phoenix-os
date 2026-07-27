@@ -19,7 +19,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 from phoenix_engine.utils.mongo_client import users_collection
 
 # ⭐ Shared JWT auth (Phoenix v2)
-from phoenix_portfolio.phoenix_platform.auth import (
+from phoenix_platform.auth import (
     verify_token,
     create_access_token,
 )

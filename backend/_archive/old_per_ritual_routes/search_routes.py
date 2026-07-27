@@ -3,10 +3,10 @@
 from fastapi import APIRouter, Query, Depends, HTTPException
 
 # Shared JWT auth (Phoenix v2)
-from phoenix_portfolio.phoenix_platform.auth import verify_token
+from phoenix_platform.auth import verify_token
 
 # Canonical DB connector
-from phoenix_portfolio.backend.mongo_client import db
+from backend.mongo_client import db
 
 router = APIRouter(prefix="/search", tags=["Search"])
 

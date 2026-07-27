@@ -2,16 +2,16 @@ from fastapi import APIRouter, HTTPException, Depends
 from datetime import datetime
 from bson import ObjectId
 
-from phoenix_portfolio.backend.schemas.pulse import (
+from backend.schemas.pulse import (
     PulseFragmentCreate,
     PulseFragmentResponse,
 )
-from phoenix_portfolio.backend.schemas.api_fragments import (
+from backend.schemas.api_fragments import (
     FragmentLogRequest,
     FragmentResponse,
 )
-from phoenix_portfolio.backend.services.ingestion import ingest_fragment
-from phoenix_portfolio.phoenix_platform.auth import verify_token
+from backend.services.ingestion import ingest_fragment
+from phoenix_platform.auth import verify_token
 
 router = APIRouter(prefix="/pulse", tags=["Pulse"])
 
@@ -66,7 +66,7 @@ def list_pulses(user=Depends(get_current_user_id)):
     Legacy-compatible listing of pulse fragments.
     """
     try:
-        from phoenix_portfolio.backend.mongo_client import db
+        from backend.mongo_client import db
         docs = list(
             db["emotional_fragments"].find({
                 "type": "pulse_fragment",
@@ -84,7 +84,7 @@ def get_pulse(id: str, user=Depends(get_current_user_id)):
     Legacy-compatible single pulse retrieval.
     """
     try:
-        from phoenix_portfolio.backend.mongo_client import db
+        from backend.mongo_client import db
 
         doc = db["emotional_fragments"].find_one({
             "_id": ObjectId(id),

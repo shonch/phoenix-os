@@ -2,16 +2,16 @@ from fastapi import APIRouter, HTTPException, Depends
 from datetime import datetime
 from bson import ObjectId
 
-from phoenix_portfolio.backend.schemas.emerge import (
+from backend.schemas.emerge import (
     EmergeCreate,
     EmergeResponse,
 )
-from phoenix_portfolio.backend.schemas.api_fragments import (
+from backend.schemas.api_fragments import (
     FragmentLogRequest,
     FragmentResponse,
 )
-from phoenix_portfolio.backend.services.ingestion import ingest_fragment
-from phoenix_portfolio.phoenix_platform.auth import verify_token
+from backend.services.ingestion import ingest_fragment
+from phoenix_platform.auth import verify_token
 
 router = APIRouter(prefix="/emerge", tags=["Emerge"])
 
@@ -73,7 +73,7 @@ def list_revelations(user=Depends(get_current_user_id)):
     Legacy-compatible listing of revelations.
     """
     try:
-        from phoenix_portfolio.backend.mongo_client import db
+        from backend.mongo_client import db
         docs = list(
             db["revelations"].find({
                 "type": "revelation",
@@ -91,7 +91,7 @@ def get_revelation(id: str, user=Depends(get_current_user_id)):
     Legacy-compatible single revelation retrieval.
     """
     try:
-        from phoenix_portfolio.backend.mongo_client import db
+        from backend.mongo_client import db
 
         doc = db["revelations"].find_one({
             "_id": ObjectId(id),

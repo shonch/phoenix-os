@@ -2,8 +2,8 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from phoenix_portfolio.phoenix_platform.auth import verify_token
-from phoenix_portfolio.backend.engines.dashboard_engine import build_dashboard_state
+from phoenix_platform.auth import verify_token
+from backend.engines.dashboard_engine import build_dashboard_state
 
 router = APIRouter(prefix="/phoenix/dashboard", tags=["Phoenix Dashboard"])
 

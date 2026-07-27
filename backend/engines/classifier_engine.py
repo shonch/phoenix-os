@@ -1,7 +1,7 @@
 from typing import List, Dict, Any
 
-from phoenix_portfolio.backend.mongo_client import db
-from phoenix_portfolio.backend.utils.serialization import serialize_doc
+from backend.mongo_client import db
+from backend.utils.serialization import serialize_doc
 
 # Canonical classifier buckets
 TYPE_KEYS = [

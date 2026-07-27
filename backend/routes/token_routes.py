@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from phoenix_portfolio.phoenix_platform.auth import create_access_token
+from phoenix_platform.auth import create_access_token
 
 router = APIRouter(prefix="/phoenix", tags=["Phoenix Token"])
 

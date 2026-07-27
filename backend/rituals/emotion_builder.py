@@ -1,6 +1,6 @@
 # phoenix_portfolio/backend/rituals/emotion_builder.py
-from phoenix_portfolio.backend.modules.symbolic_tag import _normalize_legacy_fields
-from phoenix_portfolio.backend.schemas.api_fragments import FragmentLogRequest, Tag
+from backend.modules.symbolic_tag import _normalize_legacy_fields
+from backend.schemas.api_fragments import FragmentLogRequest, Tag
 from datetime import datetime
 
 def build_emotion_fragment(payload: dict) -> FragmentLogRequest:

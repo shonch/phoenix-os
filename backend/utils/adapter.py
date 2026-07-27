@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel
 
-from phoenix_portfolio.backend.utils.serialization import serialize_doc
+from backend.utils.serialization import serialize_doc
 
 
 class NormalizedFragment(BaseModel):
@@ -48,7 +48,7 @@ def _parse_timestamp(value: Any) -> Optional[datetime]:
 
 def normalize_fragment(doc: Dict[str, Any], collection: str) -> NormalizedFragment:
     raw = serialize_doc(doc) if "_id" in doc else doc
-    _id = str(raw.get("_id"))
+    _id = str(raw.get("id") or raw.get("_id") or "")
 
     subject = raw.get("subject") or raw.get("message")
     content = raw.get("content") or raw.get("notes")

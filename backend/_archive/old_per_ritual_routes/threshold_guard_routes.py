@@ -2,16 +2,16 @@ from fastapi import APIRouter, HTTPException, Depends
 from datetime import datetime
 from bson import ObjectId
 
-from phoenix_portfolio.backend.schemas.threshold_guard import (
+from backend.schemas.threshold_guard import (
     ThresholdGuardCreate,
     ThresholdGuardResponse,
 )
-from phoenix_portfolio.backend.schemas.api_fragments import (
+from backend.schemas.api_fragments import (
     FragmentLogRequest,
     FragmentResponse,
 )
-from phoenix_portfolio.backend.services.ingestion import ingest_fragment
-from phoenix_portfolio.phoenix_platform.auth import verify_token
+from backend.services.ingestion import ingest_fragment
+from phoenix_platform.auth import verify_token
 
 router = APIRouter(prefix="/threshold_guard", tags=["Threshold Guard"])
 
@@ -74,7 +74,7 @@ def list_threshold_scans(user=Depends(get_current_user_id)):
     Legacy-compatible listing of threshold scans.
     """
     try:
-        from phoenix_portfolio.backend.mongo_client import db
+        from backend.mongo_client import db
         docs = list(
             db["thresholds"].find({
                 "type": "threshold_scan",
@@ -92,7 +92,7 @@ def get_threshold_scan(id: str, user=Depends(get_current_user_id)):
     Legacy-compatible single threshold scan retrieval.
     """
     try:
-        from phoenix_portfolio.backend.mongo_client import db
+        from backend.mongo_client import db
 
         doc = db["thresholds"].find_one({
             "_id": ObjectId(id),

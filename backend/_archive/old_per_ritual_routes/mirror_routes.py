@@ -2,16 +2,16 @@ from fastapi import APIRouter, HTTPException, Depends
 from datetime import datetime
 from bson import ObjectId
 
-from phoenix_portfolio.backend.schemas.mirror import (
+from backend.schemas.mirror import (
     MirrorCreate,
     MirrorResponse,
 )
-from phoenix_portfolio.backend.schemas.api_fragments import (
+from backend.schemas.api_fragments import (
     FragmentLogRequest,
     FragmentResponse,
 )
-from phoenix_portfolio.backend.services.ingestion import ingest_fragment
-from phoenix_portfolio.phoenix_platform.auth import verify_token
+from backend.services.ingestion import ingest_fragment
+from phoenix_platform.auth import verify_token
 
 router = APIRouter(prefix="/mirror", tags=["Mirror"])
 
@@ -69,7 +69,7 @@ def list_reflections(user=Depends(get_current_user_id)):
     Legacy-compatible listing of mirror reflections.
     """
     try:
-        from phoenix_portfolio.backend.mongo_client import db
+        from backend.mongo_client import db
         docs = list(
             db["emotional_fragments"].find({
                 "type": "revelation",
@@ -87,7 +87,7 @@ def get_reflection(id: str, user=Depends(get_current_user_id)):
     Legacy-compatible single reflection retrieval.
     """
     try:
-        from phoenix_portfolio.backend.mongo_client import db
+        from backend.mongo_client import db
 
         doc = db["emotional_fragments"].find_one({
             "_id": ObjectId(id),

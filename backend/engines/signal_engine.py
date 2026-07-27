@@ -1,8 +1,8 @@
 from typing import Dict, List, Any
 from datetime import datetime, timedelta
 
-from phoenix_portfolio.backend.mongo_client import db
-from phoenix_portfolio.backend.utils.serialization import serialize_doc
+from backend.mongo_client import db
+from backend.utils.serialization import serialize_doc
 
 
 def compute_signals(buckets: Dict[str, List[dict]]) -> Dict[str, Any]:
