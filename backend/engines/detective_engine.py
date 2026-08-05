@@ -22,7 +22,9 @@ def _load_revelations(user_id: str) -> List[NormalizedFragment]:
     docs = list(db["revelations"].find({"user_id": user_id}))
     return [normalize_fragment(d, "revelations") for d in docs]
 
-
+def _load_detective_revelations(user_id: str) -> List[NormalizedFragment]:
+    docs = list(db["revelations"].find({"user_id": user_id, "type": "detective"}))
+    return [normalize_fragment(d, "revelations") for d in docs]
 # ---------- Parsing helpers ----------
 
 def _extract_type_from_subject(subject: Optional[str], prefix: str) -> Optional[str]:
@@ -278,7 +280,7 @@ def _build_case_files(
 # ---------- Public API ----------
 
 def analyze_detective(user_id: str) -> Dict[str, Any]:
-    clues = _load_clues(user_id)
+    clues = _load_detective_revelations(user_id)    
     revelations = _load_revelations(user_id)
 
     clues_by_type: Dict[str, List[NormalizedFragment]] = {}

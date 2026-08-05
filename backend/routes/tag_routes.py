@@ -30,3 +30,10 @@ def create_tag_route(payload: dict, user=Depends(get_current_user_id)):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/suggest")
+def suggest_tags_route(query: str = "", user=Depends(get_current_user_id)):
+    results = symbolic_tag.suggest_tags(query)
+    for tag in results:
+        tag["_id"] = str(tag["_id"])
+    return {"tags": results}

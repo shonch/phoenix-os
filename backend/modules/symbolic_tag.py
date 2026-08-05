@@ -183,20 +183,22 @@ def create_tag(tag_data: dict) -> dict:
     # Check for existing tag
     existing = collection.find_one({"label": label, "user_id": user_id})
 
+
     if existing:
-        # Update existing tag
         existing["times_used"] = existing.get("times_used", 1) + 1
         existing["updated_at"] = datetime.utcnow().isoformat()
 
-        # Apply new fields
         for key, value in tag_data.items():
             if value is not None:
                 existing[key] = value
 
-        # Normalize legacy fields
         existing = _normalize_legacy_fields(existing)
 
-        collection.update_one({"_id": existing["_id"]}, {"$set": existing})
+        tag_id = existing["_id"]
+        update_fields = {k: v for k, v in existing.items() if k != "_id"}
+        collection.update_one({"_id": tag_id}, {"$set": update_fields})
+
+        existing["_id"] = str(tag_id)
         return existing
 
     # Create new PhoenixTag
