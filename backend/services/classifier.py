@@ -17,12 +17,13 @@ def _matches_any(text: str, roots: list[str]) -> bool:
 
 def classify_ritual_type(payload: dict) -> str:
     """
-    PhoenixOS v2.5 Ritual Classifier
-    All branches check actual response text (raw_inputs[0].text), not step
-    labels. Keyword lists use word ROOTS matched via regex, so different
-    conjugations/forms (exhaust/exhausted/exhausting/exhaustion) all match
-    without needing every variant spelled out. Keyword lists are a first
-    pass — tune freely during testing.
+    PhoenixOS v3.0 Ritual Classifier
+    Scores all ritual types by keyword-root hit count in the opening
+    response text, picks the highest-scoring type. Ties break by a fixed
+    priority order. `emotion` now requires real keyword signal too, instead
+    of being the silent default whenever nothing else matches — it's only
+    used as a true fallback when there's no opening text, or literally
+    zero keyword hits across every category.
     """
 
     fragment = payload.get("fragment", {}) or {}
@@ -35,72 +36,60 @@ def classify_ritual_type(payload: dict) -> str:
     if raw_inputs:
         opening_text = (raw_inputs[0].get("text") or "").lower().replace("\n", " ").strip()
 
-    # ---------------------------------------------------------
-    # 1. THRESHOLD RITUAL (highest priority)
-    # ---------------------------------------------------------
-    threshold_keywords = [
-        "stuck", "between", "crossroad", "choice", "choos", "decid",
-        "path", "torn", "transition", "liminal", "shift", "edge",
-        "threshold"
-    ]
-
+    # Threshold's explicit metadata flag still wins outright — it's a direct
+    # signal from the ritual itself, not a keyword guess.
     if threshold_type in ("release", "initiation", "threshold", "transition"):
         return "threshold"
 
-    if opening_text and _matches_any(opening_text, threshold_keywords):
-        return "threshold"
+    keyword_map = {
+        "threshold": [
+            "stuck", "between", "crossroad", "choice", "choos", "decid",
+            "path", "torn", "transition", "liminal", "shift", "edge",
+            "threshold"
+        ],
+        "emerge": [
+            "emerg", "rising", "surfac", "forming", "coming together",
+            "coming into focus", "taking shape", "unfolding", "becoming clear"
+        ],
+        "pulse": [
+            "quick", "brief", "checking in", "pulse", "heartbeat", "signal"
+        ],
+        "mirror": [
+            "reflect", "who am i", "identit", "distort", "myself",
+            "self-image", "contradict"
+        ],
+        "grind": [
+            "grind", "exhaust", "burn", "burnout", "push", "friction",
+            "resist", "wear", "tire", "strain"
+        ],
+        "anti_grind": [
+            "relief", "reliev", "release", "easy", "rest", "light",
+            "unburden", "at ease", "calm"
+        ],
+        "detective": [
+            "clue", "pattern", "investigat", "mystery", "puzzle",
+            "figure out", "connect the dots", "recur"
+        ],
+        "emotion": [
+            "feel", "feeling", "emotion", "sad", "happy", "angry",
+            "scared", "hurt", "joy", "grief", "lonely", "love",
+            "anxious", "overwhelm"
+        ],
+    }
 
-    # ---------------------------------------------------------
-    # 2. PULSE RITUAL
-    # ---------------------------------------------------------
-    pulse_keywords = [
-        "quick", "brief", "checking in", "pulse", "heartbeat", "signal"
-    ]
+    if not opening_text:
+        return "emotion"
 
-    if opening_text and _matches_any(opening_text, pulse_keywords):
-        return "pulse"
+    scores = {}
+    for ritual_type, keywords in keyword_map.items():
+        count = sum(1 for root in keywords if re.search(re.escape(root) + r"\w*", opening_text))
+        if count > 0:
+            scores[ritual_type] = count
 
-    # ---------------------------------------------------------
-    # 3. MIRROR RITUAL
-    # ---------------------------------------------------------
-    mirror_keywords = [
-        "reflect", "who am i", "identit", "distort", "myself",
-        "self-image", "contradict"
-    ]
+    if not scores:
+        return "emotion"
 
-    if opening_text and _matches_any(opening_text, mirror_keywords):
-        return "mirror"
-
-    # ---------------------------------------------------------
-    # 4. GRIND / ANTI-GRIND RITUAL
-    # ---------------------------------------------------------
-    grind_keywords = [
-        "grind", "exhaust", "burn", "burnout", "push", "friction",
-        "resist", "wear", "tire", "strain"
-    ]
-    anti_grind_keywords = [
-        "relief", "reliev", "release", "easy", "rest", "light",
-        "unburden", "at ease", "calm"
-    ]
-
-    if opening_text and _matches_any(opening_text, grind_keywords):
-        return "grind"
-
-    if opening_text and _matches_any(opening_text, anti_grind_keywords):
-        return "anti_grind"
-
-    # ---------------------------------------------------------
-    # 5. DETECTIVE RITUAL
-    # ---------------------------------------------------------
-    detective_keywords = [
-        "clue", "pattern", "investigat", "mystery", "puzzle",
-        "figure out", "connect the dots", "recur"
-    ]
-
-    if opening_text and _matches_any(opening_text, detective_keywords):
-        return "detective"
-
-    # ---------------------------------------------------------
-    # 6. DEFAULT
-    # ---------------------------------------------------------
-    return "emotion"
+    priority_order = ["threshold", "emerge", "pulse", "mirror", "grind",
+                       "anti_grind", "detective", "emotion"]
+    best = max(scores.items(), key=lambda kv: (kv[1], -priority_order.index(kv[0])))
+    return best[0]

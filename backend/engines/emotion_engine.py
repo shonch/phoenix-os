@@ -94,11 +94,34 @@ def analyze_emotion_fragments(fragments: List[Fragment]) -> Dict[str, Any]:
         "dominant_emotions": dominant_emotions,
         "tag_frequency": tag_frequency,
         "cycles": cycles,
+        "trend_label": _trend_label(dominant_emotions, cycles),
     }
 
 # ============================================================
 #   HELPERS (unchanged)
 # ============================================================
+
+def _trend_label(dominant_emotions: List[dict], cycles: List[dict]) -> Optional[str]:
+    """
+    Derive a short, honest trend phrase from real counts — no interpretation
+    beyond naming what's most frequent and whether recent activity is
+    rising or falling. Returns None if there's not enough data yet.
+    """
+    if not dominant_emotions:
+        return None
+
+    top = dominant_emotions[0]["emotion"]
+
+    if len(cycles) >= 2:
+        recent = sum(c["count"] for c in cycles[-3:])
+        earlier = sum(c["count"] for c in cycles[-6:-3]) if len(cycles) >= 6 else None
+        if earlier is not None:
+            if recent > earlier:
+                return f"{top}, more present lately"
+            if recent < earlier:
+                return f"{top}, easing lately"
+
+    return top
 
 def _extract_tags(frag: Fragment) -> List[str]:
     raw = frag.get("tags", [])
