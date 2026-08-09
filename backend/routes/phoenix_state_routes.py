@@ -87,10 +87,10 @@ def get_state(user=Depends(get_current_user_id), limit: int = 200):
         "grind": analyze_grind(uid),
         "tags": analyze_tags(uid),
         "classifiers": analyze_classifiers(uid),
-
-
+        "emotional_trend": None,  # placeholder, set below
+    
     }
-
+    analysis["emotional_trend"] = analysis["emotion"].get("trend_label")
     state = {
         "raw": raw_state,
         "analysis": analysis,
