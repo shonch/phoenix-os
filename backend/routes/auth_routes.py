@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, EmailStr
 from passlib.context import CryptContext
 from datetime import datetime
-
+from phoenix_platform.auth import create_access_token, create_refresh_token, verify_refresh_token
 from backend.mongo_client import db
 from phoenix_platform.auth import create_access_token
 
@@ -28,8 +28,11 @@ class LoginRequest(BaseModel):
 
 class AuthResponse(BaseModel):
     token: str
+    refresh_token: str
     email: str
 
+class RefreshRequest(BaseModel):
+    refresh_token: str
 
 @router.post("/register", response_model=AuthResponse)
 def register(payload: RegisterRequest):
@@ -51,8 +54,8 @@ def register(payload: RegisterRequest):
     # user_id (the "sub" claim) is the email itself — matches every existing
     # route/engine/builder across the app, which all query Mongo by email string.
     token = create_access_token({"sub": payload.email})
-    return {"token": token, "email": payload.email}
-
+    refresh = create_refresh_token({"sub": payload.email})
+    return {"token": token, "refresh_token": refresh, "email": payload.email}
 
 @router.post("/login", response_model=AuthResponse)
 def login(payload: LoginRequest):
@@ -61,4 +64,13 @@ def login(payload: LoginRequest):
         raise HTTPException(status_code=401, detail="Invalid email or password.")
 
     token = create_access_token({"sub": payload.email})
-    return {"token": token, "email": payload.email}
+    refresh = create_refresh_token({"sub": payload.email})
+    return {"token": token, "refresh_token": refresh, "email": payload.email}
+
+
+@router.post("/refresh", response_model=AuthResponse)
+def refresh_token(payload: RefreshRequest):
+    email = verify_refresh_token(payload.refresh_token)
+    new_token = create_access_token({"sub": email})
+    new_refresh = create_refresh_token({"sub": email})
+    return {"token": new_token, "refresh_token": new_refresh, "email": email}
