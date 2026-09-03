@@ -6,6 +6,7 @@ from jose import JWTError, jwt
 import os
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
+import secrets
 
 load_dotenv()
 
@@ -14,6 +15,13 @@ ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 60))
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")
+
+
+def generate_recovery_code() -> str:
+    """Generates a random, readable recovery code like 7F3K-9QRT-XM2P."""
+    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no ambiguous chars (0/O, 1/I/L)
+    groups = ["".join(secrets.choice(alphabet) for _ in range(4)) for _ in range(3)]
+    return "-".join(groups)
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
     to_encode = data.copy()

@@ -4,7 +4,8 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, EmailStr
 from passlib.context import CryptContext
 from datetime import datetime
-from phoenix_platform.auth import create_access_token, create_refresh_token, verify_refresh_token
+from phoenix_platform.auth import create_access_token, create_refresh_token, verify_refresh_token, verify_token, generate_recovery_code
+from fastapi import Depends
 from backend.mongo_client import db
 from phoenix_platform.auth import create_access_token
 
@@ -33,6 +34,15 @@ class AuthResponse(BaseModel):
 
 class RefreshRequest(BaseModel):
     refresh_token: str
+
+class RecoveryCodeResponse(BaseModel):
+    recovery_code: str
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    recovery_code: str
+    new_password: str
+
 
 @router.post("/register", response_model=AuthResponse)
 def register(payload: RegisterRequest):
@@ -74,3 +84,45 @@ def refresh_token(payload: RefreshRequest):
     new_token = create_access_token({"sub": email})
     new_refresh = create_refresh_token({"sub": email})
     return {"token": new_token, "refresh_token": new_refresh, "email": email}
+
+
+
+@router.post("/generate-recovery-code", response_model=RecoveryCodeResponse)
+def generate_recovery_code_route(user_id: str = Depends(verify_token)):
+    code = generate_recovery_code()
+    code_hash = pwd_context.hash(code)
+
+    users_collection.update_one(
+        {"email": user_id},
+        {"$set": {"recovery_code_hash": code_hash}}
+    )
+
+    return {"recovery_code": code}
+
+@router.post("/reset-password")
+def reset_password(payload: ResetPasswordRequest):
+    user = users_collection.find_one({"email": payload.email})
+    if not user or not user.get("recovery_code_hash"):
+        raise HTTPException(status_code=400, detail="Invalid email or recovery code.")
+
+    if not pwd_context.verify(payload.recovery_code, user["recovery_code_hash"]):
+        raise HTTPException(status_code=400, detail="Invalid email or recovery code.")
+
+    if len(payload.new_password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters.")
+
+    new_password_hash = pwd_context.hash(payload.new_password)
+    new_recovery_code = generate_recovery_code()
+    new_recovery_hash = pwd_context.hash(new_recovery_code)
+
+    users_collection.update_one(
+        {"email": payload.email},
+        {"$set": {
+            "password_hash": new_password_hash,
+            "recovery_code_hash": new_recovery_hash
+        }}
+    )
+
+    return {"message": "Password reset successful.", "new_recovery_code": new_recovery_code}
+
+
