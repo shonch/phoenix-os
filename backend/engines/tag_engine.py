@@ -107,7 +107,7 @@ def analyze_tags(user_id: str) -> Dict[str, Any]:
     pipeline), so old and new tag data both appear.
     """
     collections_to_scan = [
-        "fragments", "emotional_fragments", "revelations", "thresholds", "clues"
+        "fragments", "emotional_fragments", "revelations", "thresholds"
     ]
 
     docs: List[dict] = []
