@@ -49,12 +49,6 @@ def get_state(user=Depends(get_current_user_id), limit: int = 200):
         ),
         # ✅ SYMBOLIC TAGS VIA SYMBOLIC TAG MODULE (NORMALIZED, SINGLE SOURCE OF TRUTH)
         "symbolic_tags": list_tags(uid),
-        "clues": list(
-            db["clues"]
-            .find({"user_id": uid})
-            .sort("timestamp", -1)
-            .limit(limit)
-        ),
         "thresholds": list(
             db["thresholds"]
             .find({"user_id": uid})
@@ -65,12 +59,6 @@ def get_state(user=Depends(get_current_user_id), limit: int = 200):
             db["revelations"]
             .find({"user_id": uid})
             .sort("date", -1)
-            .limit(limit)
-        ),
-        "module_status": list(
-            db["module_status"]
-            .find({"user_id": uid})
-            .sort("timestamp", -1)
             .limit(limit)
         ),
     }
