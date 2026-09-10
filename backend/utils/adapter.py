@@ -53,12 +53,18 @@ def normalize_fragment(doc: Dict[str, Any], collection: str) -> NormalizedFragme
     subject = raw.get("subject") or raw.get("message")
     content = raw.get("content") or raw.get("notes")
 
-    tags = raw.get("tags") or []
-    if tags is None:
-        tags = []
-    if not isinstance(tags, list):
-        tags = [str(tags)]
-    tags = [str(t) for t in tags]
+    raw_tags = raw.get("tags") or []
+    if not isinstance(raw_tags, list):
+        raw_tags = [raw_tags]
+
+    tags: List[str] = []
+    for t in raw_tags:
+        if isinstance(t, dict):
+            name = t.get("name") or t.get("label") or t.get("tag_name")
+            if name:
+                tags.append(str(name))
+        else:
+            tags.append(str(t))
 
     weather = raw.get("weather")
 
@@ -86,4 +92,3 @@ def normalize_fragment(doc: Dict[str, Any], collection: str) -> NormalizedFragme
         source=source,
         raw=raw,
     )
-

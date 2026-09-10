@@ -16,9 +16,16 @@ def _load_emotional_fragments(user_id: str) -> List[NormalizedFragment]:
 
 
 def analyze_grief(user_id: str) -> Dict[str, Any]:
+    """
+    Grief was never one of Phoenix's real ritual types, so this is
+    honestly a keyword SEARCH across your archive for moments where
+    the word "grief" surfaces — even briefly, inside a fragment that's
+    really about something else — not a real category like Emotion or
+    Mirror. Labeled "Traces of Grief" for that reason.
+    """
     frags = _load_emotional_fragments(user_id)
 
-    grief_related: List[NormalizedFragment] = []
+    traces: List[NormalizedFragment] = []
     for f in frags:
         text_bits = [
             " ".join(f.tags or []),
@@ -29,26 +36,27 @@ def analyze_grief(user_id: str) -> Dict[str, Any]:
         ]
         joined = " ".join(text_bits).lower()
         if "grief" in joined:
-            grief_related.append(f)
+            traces.append(f)
 
-    grief_sorted = sorted(
-        grief_related,
+    traces_sorted = sorted(
+        traces,
         key=lambda x: x.timestamp or datetime.min,
         reverse=True,
     )
 
     return {
-        "total_emotional_fragments": len(frags),
-        "grief_events": len(grief_related),
-        "recent_grief": [
+        "label": "Traces of Grief",
+        "total_scanned": len(frags),
+        "trace_count": len(traces),
+        "traces": [
             {
                 "id": f.id,
                 "subject": f.subject,
                 "date": f.date_raw,
                 "tags": f.tags,
-                "weather": f.weather,
+                "type": getattr(f, "type", None),
+                "snippet": (f.content or "")[:160],
             }
-            for f in grief_sorted[:10]
+            for f in traces_sorted
         ],
     }
-

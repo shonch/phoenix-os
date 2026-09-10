@@ -27,41 +27,55 @@ FRISSON_PHRASES = [
 
 
 # ============================================================
-#   FRISSON ENGINE — counts only
+#   FRISSON ENGINE — like Grief, this is a keyword SEARCH across
+#   your archive, not a real ritual category (Frisson isn't one
+#   of the 8 ritual types). Labeled "Traces of Frisson" for that
+#   reason. Note some hints (mountain, ritual, mythic) are common
+#   words in normal writing, so a trace doesn't always mean a real
+#   frisson moment — treat this as a starting point to look at,
+#   not a confirmed count.
 # ============================================================
 
 def analyze_frisson_fragments(fragments: List[Fragment]) -> Dict[str, Any]:
     if not fragments:
         return {
-            "intensity_profile": [],
+            "label": "Traces of Frisson",
+            "total_scanned": 0,
+            "trace_count": 0,
+            "traces": [],
             "triggers": [],
             "contexts": [],
         }
 
-    intensity_counter = Counter()
     trigger_counter = Counter()
     context_counter = Counter()
+    traces = []
 
     for frag in fragments:
         content = (frag.get("body") or frag.get("raw_text") or "").lower()
         tags = _extract_tags(frag)
-        source = (frag.get("source") or "").lower()
-        ctx = (frag.get("context") or frag.get("note") or "").lower()
 
-        intensity = frag.get("intensity")
-        if isinstance(intensity, (int, float)):
-            bucket = _bucket_intensity(intensity)
-            intensity_counter[bucket] += 1
+        matched_hints = [t for t in tags if t in FRISSON_TAG_HINTS]
+        matched_phrases = [p for p in FRISSON_PHRASES if p in content]
 
-        for t in tags:
-            if t in FRISSON_TAG_HINTS:
-                trigger_counter[t] += 1
+        if not matched_hints and not matched_phrases:
+            continue
 
-        for phrase in FRISSON_PHRASES:
-            if phrase in content:
-                trigger_counter[phrase] += 1
+        traces.append({
+            "id": str(frag.get("_id") or frag.get("id") or ""),
+            "subject": frag.get("title") or frag.get("subject"),
+            "date": frag.get("date") or frag.get("timestamp"),
+            "type": frag.get("type"),
+            "snippet": (frag.get("body") or frag.get("raw_text") or "")[:160],
+            "matched": matched_hints + matched_phrases,
+        })
 
-        if "music" in source or "track" in content or "album" in content:
+        for t in matched_hints:
+            trigger_counter[t] += 1
+        for p in matched_phrases:
+            trigger_counter[p] += 1
+
+        if "music" in (frag.get("source") or "").lower() or "track" in content or "album" in content:
             context_counter["music"] += 1
         if "mountain" in content or "ridge" in content or "summit" in content:
             context_counter["mountain"] += 1
@@ -69,12 +83,7 @@ def analyze_frisson_fragments(fragments: List[Fragment]) -> Dict[str, Any]:
             context_counter["ocean"] += 1
         if "city" in content or "street" in content:
             context_counter["city"] += 1
-        if ctx:
-            context_counter["other"] += 1
 
-    intensity_profile = [
-        {"bucket": b, "count": c} for b, c in sorted(intensity_counter.items())
-    ]
     triggers = [
         {"trigger": t, "count": c} for t, c in trigger_counter.most_common(15)
     ]
@@ -83,7 +92,10 @@ def analyze_frisson_fragments(fragments: List[Fragment]) -> Dict[str, Any]:
     ]
 
     return {
-        "intensity_profile": intensity_profile,
+        "label": "Traces of Frisson",
+        "total_scanned": len(fragments),
+        "trace_count": len(traces),
+        "traces": traces,
         "triggers": triggers,
         "contexts": contexts,
     }
@@ -115,52 +127,10 @@ def _extract_tags(frag: Fragment) -> List[str]:
     return [t.lower() for t in tags if t]
 
 
-def _bucket_intensity(value: float) -> str:
-    if value >= 8:
-        return "peak"
-    if value >= 5:
-        return "strong"
-    if value >= 3:
-        return "moderate"
-    return "subtle"
-
-
 def analyze_frisson(user_id: str) -> Dict[str, Any]:
-    """
-    State-engine wrapper for analyze_frisson_fragments.
-    Loads emotional_fragments and filters for frisson-related content,
-    checking the real body/raw_text fields (not legacy 'content').
-    """
     docs = list(
         db["emotional_fragments"]
         .find({"user_id": user_id})
         .sort("timestamp", -1)
     )
-
-    frisson_docs = []
-    for d in docs:
-        content = (d.get("body") or d.get("raw_text") or "").lower()
-        tags = d.get("tags", [])
-        tag_list = []
-
-        if isinstance(tags, list):
-            for t in tags:
-                if isinstance(t, dict):
-                    name = t.get("tag_name") or t.get("name")
-                    if name:
-                        tag_list.append(str(name).lower())
-                else:
-                    tag_list.append(str(t).lower())
-        elif isinstance(tags, dict):
-            name = tags.get("tag_name") or tags.get("name")
-            if name:
-                tag_list.append(str(name).lower())
-        elif isinstance(tags, str):
-            tag_list.append(tags.lower())
-
-        if any(hint in content for hint in FRISSON_TAG_HINTS) or any(
-            hint in tag_list for hint in FRISSON_TAG_HINTS
-        ):
-            frisson_docs.append(d)
-
-    return analyze_frisson_fragments(frisson_docs)
+    return analyze_frisson_fragments(docs)

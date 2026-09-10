@@ -1,7 +1,7 @@
 # phoenix_portfolio/backend/engines/grind_engine.py
 
 from collections import Counter, defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 from backend.mongo_client import db
@@ -12,70 +12,66 @@ Fragment = Dict[str, Any]
 
 
 # ============================================================
-#   GRIND ENGINE — counts and structural pattern detection only
+#   GRIND ENGINE — real fragments first, structural patterns
+#   (no made-up fields) as secondary.
 # ============================================================
 
 def analyze_grind_fragments(fragments: List[Fragment]) -> Dict[str, Any]:
     if not fragments:
         return {
+            "total": 0,
+            "grind_fragments": [],
+            "release_fragments": [],
             "patterns": [],
-            "fatigue_indicators": [],
-            "override_patterns": [],
             "cycles": [],
-            "co_occurrence": {},
-            "anomalies": [],
+            "fatigue_signal": None,
         }
 
     tag_counter = Counter()
-    co_occurrence = defaultdict(Counter)
-    scans: List[Fragment] = []
-    overrides: List[Fragment] = []
+    grind_frags: List[dict] = []
+    release_frags: List[dict] = []
 
     for frag in fragments:
         f_type = (frag.get("type") or "").lower()
 
-        if f_type in ("grind_scan", "grind"):
-            scans.append(frag)
-        elif f_type in ("grind_override", "anti_grind"):
-            overrides.append(frag)
+        frag_ref = {
+            "id": str(frag.get("_id") or frag.get("id") or ""),
+            "date": (frag.get("date") or frag.get("timestamp")),
+            "title": frag.get("title") or frag.get("subject"),
+            "snippet": (frag.get("body") or frag.get("raw_text") or "")[:160],
+        }
 
-        tags = _extract_tags(frag)
-        for t in tags:
+        if f_type in ("grind", "grind_scan"):
+            grind_frags.append(frag_ref)
+        elif f_type in ("anti_grind", "grind_override"):
+            release_frags.append(frag_ref)
+
+        for t in _extract_tags(frag):
             tag_counter[t] += 1
 
-        for i, t1 in enumerate(tags):
-            for t2 in tags[i + 1:]:
-                co_occurrence[t1][t2] += 1
-                co_occurrence[t2][t1] += 1
+    grind_frags.sort(key=lambda f: f["date"] or "", reverse=True)
+    release_frags.sort(key=lambda f: f["date"] or "", reverse=True)
 
     patterns = [
         {"tag": tag, "count": count}
         for tag, count in tag_counter.most_common(15)
     ]
 
-    fatigue_indicators = _detect_fatigue(scans)
-    override_patterns = _detect_overrides(overrides)
-    cycles = _detect_cycles(scans, overrides)
-
-    co_map = {
-        tag: [{"tag": other, "count": c} for other, c in partners.most_common(10)]
-        for tag, partners in co_occurrence.items()
-    }
-
-    anomalies = _detect_anomalies(scans, overrides)
+    cycles = _detect_cycles(fragments)
+    fatigue_signal = _detect_fatigue_signal(grind_frags)
 
     return {
+        "total": len(grind_frags) + len(release_frags),
+        "grind_fragments": grind_frags,
+        "release_fragments": release_frags,
         "patterns": patterns,
-        "fatigue_indicators": fatigue_indicators,
-        "override_patterns": override_patterns,
         "cycles": cycles,
-        "co_occurrence": co_map,
-        "anomalies": anomalies,
+        "fatigue_signal": fatigue_signal,
     }
 
 
 # ============================================================
-#   HELPERS (unchanged)
+#   HELPERS
 # ============================================================
 
 def _extract_tags(frag: Fragment) -> List[str]:
@@ -113,114 +109,84 @@ def _parse_ts(value: Any) -> Optional[datetime]:
 
 def _extract_timestamp(frag: Fragment) -> Optional[datetime]:
     for key in ["timestamp", "date", "created_at", "inserted_at"]:
-        ts = frag.get(key)
-        if not ts:
-            continue
-        parsed = _parse_ts(ts)
+        parsed = _parse_ts(frag.get(key))
         if parsed:
             return parsed
     return None
 
 
-def _detect_fatigue(scans: List[Fragment]) -> List[Dict[str, Any]]:
-    indicators = []
-
-    for frag in scans:
-        energy = frag.get("energy")
-        sleep = frag.get("sleep")
-        urgency = frag.get("urgency")
-
-        if isinstance(energy, (int, float)) and energy <= 4:
-            indicators.append({
-                "id": frag.get("id"),
-                "type": "low_energy",
-                "energy": energy,
-                "timestamp": frag.get("timestamp"),
-            })
-
-        if isinstance(sleep, str) and sleep.lower() == "poor":
-            indicators.append({
-                "id": frag.get("id"),
-                "type": "poor_sleep",
-                "timestamp": frag.get("timestamp"),
-            })
-
-        if isinstance(urgency, str) and urgency.lower() == "yes":
-            indicators.append({
-                "id": frag.get("id"),
-                "type": "impulse_to_quit",
-                "timestamp": frag.get("timestamp"),
-            })
-
-    return indicators
-
-
-def _detect_overrides(overrides: List[Fragment]) -> List[Dict[str, Any]]:
-    patterns = []
-
-    for frag in overrides:
-        action = frag.get("action")
-        if action:
-            patterns.append({
-                "id": frag.get("id"),
-                "action": action,
-                "timestamp": frag.get("timestamp"),
-            })
-
-    return patterns
-
-
-def _detect_cycles(scans: List[Fragment], overrides: List[Fragment]) -> List[Dict[str, Any]]:
-    cycles: List[Dict[str, Any]] = []
-
-    all_events = []
-    for f in scans:
+def _detect_cycles(fragments: List[Fragment]) -> List[Dict[str, Any]]:
+    """Real structural pattern: how long between a Grind fragment and the
+    next Release (anti_grind) fragment after it — a genuine, non-guessed
+    signal, since it's just comparing real timestamps."""
+    events = []
+    for f in fragments:
+        f_type = (f.get("type") or "").lower()
         ts = _extract_timestamp(f)
-        if ts:
-            all_events.append((ts, "scan", f))
-    for f in overrides:
-        ts = _extract_timestamp(f)
-        if ts:
-            all_events.append((ts, "override", f))
+        if not ts:
+            continue
+        if f_type in ("grind", "grind_scan"):
+            events.append((ts, "grind", f))
+        elif f_type in ("anti_grind", "grind_override"):
+            events.append((ts, "release", f))
 
-    all_events.sort(key=lambda x: x[0])
+    events.sort(key=lambda x: x[0])
 
-    for i in range(len(all_events) - 1):
-        ts1, t1, f1 = all_events[i]
-        ts2, t2, f2 = all_events[i + 1]
-
-        if t1 == "scan" and t2 == "override":
+    cycles = []
+    for i in range(len(events) - 1):
+        ts1, t1, f1 = events[i]
+        ts2, t2, f2 = events[i + 1]
+        if t1 == "grind" and t2 == "release":
             delta = ts2 - ts1
             cycles.append({
-                "scan_id": f1.get("id"),
-                "override_id": f2.get("id"),
-                "time_between": delta.total_seconds() / 60,
-                "timestamp_scan": f1.get("timestamp"),
-                "timestamp_override": f2.get("timestamp"),
+                "grind_id": str(f1.get("_id") or f1.get("id") or ""),
+                "release_id": str(f2.get("_id") or f2.get("id") or ""),
+                "days_between": round(delta.total_seconds() / 86400, 1),
+                "grind_date": f1.get("date") or f1.get("timestamp"),
+                "release_date": f2.get("date") or f2.get("timestamp"),
             })
 
     return cycles
 
 
-def _detect_anomalies(scans: List[Fragment], overrides: List[Fragment]) -> List[Dict[str, Any]]:
-    anomalies: List[Dict[str, Any]] = []
+def _detect_fatigue_signal(grind_frags: List[dict]) -> Optional[Dict[str, Any]]:
+    """
+    Structural signal only — no guessed fields. Compares how many real
+    Grind fragments landed in the most recent 14 days vs. the 14 days
+    before that. A genuine frequency pattern in when you actually wrote,
+    not an inference about how you felt.
+    """
+    now = datetime.utcnow()
+    recent_cutoff = now - timedelta(days=14)
+    prior_cutoff = now - timedelta(days=28)
 
-    if len(scans) == 1:
-        anomalies.append({"type": "single_scan", "id": scans[0].get("id")})
+    recent_count = 0
+    prior_count = 0
 
-    if len(overrides) == 1:
-        anomalies.append({"type": "single_override", "id": overrides[0].get("id")})
+    for f in grind_frags:
+        ts = _parse_ts(f["date"])
+        if not ts:
+            continue
+        if ts >= recent_cutoff:
+            recent_count += 1
+        elif ts >= prior_cutoff:
+            prior_count += 1
 
-    return anomalies
+    if recent_count == 0 and prior_count == 0:
+        return None
+
+    return {
+        "recent_14_days": recent_count,
+        "prior_14_days": prior_count,
+        "trend": "rising" if recent_count > prior_count else ("easing" if recent_count < prior_count else "steady"),
+    }
 
 
 def analyze_grind(user_id: str) -> Dict[str, Any]:
     """
-    State-engine wrapper for analyze_grind_fragments.
-    Loads grind/anti_grind fragments from emotional_fragments (the current
-    ritual pipeline's collection), plus legacy grind_scan/grind_override
-    fragments from the old 'fragments' collection, so both old and new
-    data are visible.
+    Loads grind/anti_grind fragments from emotional_fragments (current
+    pipeline), plus legacy grind_scan/grind_override fragments from the
+    old fragments collection, so both old and new data are visible.
     """
     current_docs = [
         serialize_doc(d)

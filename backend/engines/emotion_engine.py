@@ -14,76 +14,60 @@ EMOTION_TAGS = {
     "tension", "release", "relief", "confusion",
 }
 
-EMOTION_PHRASES = [
-    "i feel", "i'm feeling", "im feeling", "emotionally", "it feels like",
-    "i'm overwhelmed", "im overwhelmed", "i'm exhausted", "im exhausted",
-    "i'm anxious", "im anxious",
-    "i feel clear", "i feel foggy", "i feel lost",
-    "i feel grounded", "i feel steady",
-]
-
 # ============================================================
-#   EMOTION ENGINE — real counts, real fragment references, no interpretation
+#   EMOTION ENGINE — real fragments first, keyword words as a
+#   secondary, honestly-labeled stat only.
 # ============================================================
 
 def analyze_emotion_fragments(fragments: List[Fragment]) -> Dict[str, Any]:
     """
-    Emotion Engine — counts only. No summary sentences, no interpretive claims.
-    Every count links back to the actual fragments that produced it.
+    Primary: every fragment whose real ritual type is "emotion" —
+    ground truth the user stated by picking that stone.
+    Secondary: which words from a fixed list recur across that text —
+    labeled as recurring words, not as emotional categories.
     """
 
-    if not fragments:
+    emotion_fragments = [f for f in fragments if (f.get("type") or "").lower() == "emotion"]
+
+    if not emotion_fragments:
         return {
-            "dominant_emotions": [],
-            "tag_frequency": [],
+            "total": 0,
+            "fragments": [],
+            "recurring_words": [],
             "cycles": [],
+            "trend_label": None,
         }
 
-    emotion_occurrences: Dict[str, List[dict]] = defaultdict(list)
-    tag_occurrences: Dict[str, List[dict]] = defaultdict(list)
+    word_occurrences: Dict[str, List[dict]] = defaultdict(list)
     by_day = Counter()
+    frag_refs = []
 
-    for frag in fragments:
-        content = (frag.get("body") or frag.get("content") or "").lower()
+    for frag in emotion_fragments:
+        content = (frag.get("body") or frag.get("raw_text") or "").lower()
         tags = _extract_tags(frag)
         ts = _extract_timestamp(frag)
 
         frag_ref = {
             "id": str(frag.get("_id") or frag.get("id") or ""),
             "date": ts.isoformat() if ts else None,
-            "snippet": (frag.get("body") or frag.get("content") or "")[:160],
+            "title": frag.get("title") or frag.get("subject"),
+            "snippet": (frag.get("body") or frag.get("raw_text") or "")[:160],
         }
+        frag_refs.append(frag_ref)
 
-        # Emotion-word matches (from tags AND raw content, since not every
-        # entry uses a formal tag for a feeling word)
         for word in EMOTION_TAGS:
             if word in tags or word in content:
-                emotion_occurrences[word].append(frag_ref)
-
-        # Real tag frequency — ALL tags, not filtered to the emotion set.
-        # Deliberately includes noisy/rough tags for now (e.g. oddly-specific
-        # or comma-mangled ones) — this is expected until tag quality/
-        # enrichment work happens; seeing the noise is how we'll know what
-        # to fix.
-        for t in tags:
-            tag_occurrences[t].append(frag_ref)
+                word_occurrences[word].append(frag_ref)
 
         if ts:
             by_day[ts.date()] += 1
 
-    dominant_emotions = [
-        {"emotion": e, "count": len(refs), "fragments": refs}
-        for e, refs in sorted(
-            emotion_occurrences.items(), key=lambda kv: -len(kv[1])
-        )
-    ][:10]
+    frag_refs.sort(key=lambda f: f["date"] or "", reverse=True)
 
-    tag_frequency = [
-        {"tag": t, "count": len(refs), "fragments": refs}
-        for t, refs in sorted(
-            tag_occurrences.items(), key=lambda kv: -len(kv[1])
-        )
-    ][:15]
+    recurring_words = [
+        {"word": w, "count": len(refs), "fragments": refs}
+        for w, refs in sorted(word_occurrences.items(), key=lambda kv: -len(kv[1]))
+    ][:10]
 
     cycles = [
         {"day": d.isoformat(), "count": c}
@@ -91,26 +75,22 @@ def analyze_emotion_fragments(fragments: List[Fragment]) -> Dict[str, Any]:
     ]
 
     return {
-        "dominant_emotions": dominant_emotions,
-        "tag_frequency": tag_frequency,
+        "total": len(emotion_fragments),
+        "fragments": frag_refs,
+        "recurring_words": recurring_words,
         "cycles": cycles,
-        "trend_label": _trend_label(dominant_emotions, cycles),
+        "trend_label": _trend_label(recurring_words, cycles),
     }
 
 # ============================================================
-#   HELPERS (unchanged)
+#   HELPERS
 # ============================================================
 
-def _trend_label(dominant_emotions: List[dict], cycles: List[dict]) -> Optional[str]:
-    """
-    Derive a short, honest trend phrase from real counts — no interpretation
-    beyond naming what's most frequent and whether recent activity is
-    rising or falling. Returns None if there's not enough data yet.
-    """
-    if not dominant_emotions:
+def _trend_label(recurring_words: List[dict], cycles: List[dict]) -> Optional[str]:
+    if not recurring_words:
         return None
 
-    top = dominant_emotions[0]["emotion"]
+    top = recurring_words[0]["word"]
 
     if len(cycles) >= 2:
         recent = sum(c["count"] for c in cycles[-3:])
@@ -160,10 +140,16 @@ def _extract_timestamp(frag: Fragment) -> Optional[datetime]:
         return None
 
 # ============================================================
-#   STATE ENGINE WRAPPER (unchanged)
+#   STATE ENGINE WRAPPER
 # ============================================================
 
 def analyze_emotion(user_id: str) -> Dict[str, Any]:
+    """
+    Loads from emotional_fragments AND revelations — both can hold real
+    ritual data (emotion writes to emotional_fragments; this also checks
+    revelations in case type ever appears there) — and filters to
+    type == "emotion" as the real, ground-truth criterion.
+    """
     fragments = [
         serialize_doc(d)
         for d in db["emotional_fragments"]

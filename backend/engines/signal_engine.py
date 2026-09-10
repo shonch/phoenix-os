@@ -4,16 +4,22 @@ from datetime import datetime, timedelta
 from backend.mongo_client import db
 from backend.utils.serialization import serialize_doc
 
+# The 8 real ritual types — anything outside this set is legacy/test
+# debris from earlier architecture, not a meaningful ongoing category.
+REAL_RITUAL_TYPES = {
+    "emotion", "detective", "mirror", "grind", "anti_grind",
+    "threshold", "emerge", "pulse",
+}
+
 
 def compute_signals(buckets: Dict[str, List[dict]]) -> Dict[str, Any]:
     """
-    Compute emotional, symbolic, mythic, and system signals
-    from classified fragment buckets.
+    Emotional and symbolic signals — scoped to real ritual types only.
+    Legacy/test type values (test_fragment, migration_complete, etc.)
+    are excluded entirely rather than shown as if they're meaningful
+    ongoing categories.
     """
 
-    # -----------------------------
-    # Helper: extract timestamps
-    # -----------------------------
     def get_ts(doc: dict):
         ts = doc.get("timestamp") or doc.get("date") or doc.get("inserted_at")
         if isinstance(ts, str):
@@ -23,13 +29,9 @@ def compute_signals(buckets: Dict[str, List[dict]]) -> Dict[str, Any]:
                 return None
         return ts
 
-    # -----------------------------
-    # Helper: normalize tags
-    # -----------------------------
     def get_tags(doc: dict) -> List[str]:
         raw = doc.get("tags", [])
         tags: List[str] = []
-
         if isinstance(raw, dict):
             name = raw.get("tag_name") or raw.get("name")
             if name:
@@ -44,24 +46,21 @@ def compute_signals(buckets: Dict[str, List[dict]]) -> Dict[str, Any]:
                     tags.append(str(t))
         elif isinstance(raw, str):
             tags.append(raw)
-
         return tags
 
     now = datetime.utcnow()
 
-    # -----------------------------
-    # Emotional signals
-    # -----------------------------
+    real_buckets = {k: v for k, v in buckets.items() if k in REAL_RITUAL_TYPES}
+
     emotional_signals = {
         "rising": [],
         "fading": [],
         "active": [],
         "dormant": [],
-        "unresolved": [],
-        "anomalies": [],
+        "recent": [],
     }
 
-    for bucket_type, docs in buckets.items():
+    for bucket_type, docs in real_buckets.items():
         if not docs:
             continue
 
@@ -72,15 +71,14 @@ def compute_signals(buckets: Dict[str, List[dict]]) -> Dict[str, Any]:
         timestamps.sort(reverse=True)
         latest = timestamps[0]
 
-        # Active if within 48 hours
         if now - latest < timedelta(hours=48):
             emotional_signals["active"].append(bucket_type)
-
-        # Dormant if older than 30 days
-        if now - latest > timedelta(days=30):
+        elif now - latest > timedelta(days=30):
             emotional_signals["dormant"].append(bucket_type)
+        else:
+            emotional_signals["recent"].append(bucket_type)
 
-        # Rising/fading: compare last 5 vs previous 5
+
         if len(timestamps) >= 10:
             recent = timestamps[:5]
             older = timestamps[5:10]
@@ -91,77 +89,37 @@ def compute_signals(buckets: Dict[str, List[dict]]) -> Dict[str, Any]:
             else:
                 emotional_signals["fading"].append(bucket_type)
 
-        # Unresolved: simple heuristic
-        for d in docs:
-            if d.get("unresolved") is True:
-                emotional_signals["unresolved"].append(d)
-                break
-
-        # Anomalies: missing any timestamp field
-        for d in docs:
-            if "timestamp" not in d and "date" not in d and "inserted_at" not in d:
-                emotional_signals["anomalies"].append(d)
-                break
-
-    # -----------------------------
-    # Symbolic signals
-    # -----------------------------
-    symbolic_signals = {
-        "evolving": [],
-        "clusters": [],
-    }
-
+    # Evolving Tags: real tags that appear on fragments across 2+ of the
+    # REAL ritual types — a genuine cross-ritual pattern, not a coincidence
+    # with legacy/test data.
     tag_occurrences: Dict[str, set] = {}
-    for bucket_type, docs in buckets.items():
+    for bucket_type, docs in real_buckets.items():
         for d in docs:
             for tag in get_tags(d):
                 tag_occurrences.setdefault(tag, set()).add(bucket_type)
 
-    for tag, types in tag_occurrences.items():
-        if len(types) > 1:
-            symbolic_signals["evolving"].append(tag)
+    evolving_tags = [
+        {"tag": tag, "ritual_types": sorted(types)}
+        for tag, types in tag_occurrences.items()
+        if len(types) > 1
+    ]
+    evolving_tags.sort(key=lambda t: -len(t["ritual_types"]))
 
-    # -----------------------------
-    # Mythic signals
-    # -----------------------------
-    mythic_signals = {
-        "active": [],
-        "arcs": [],
-    }
+    legacy_type_count = sum(len(v) for k, v in buckets.items() if k not in REAL_RITUAL_TYPES)
 
-    mythic_docs = buckets.get("mythic", [])
-    for d in mythic_docs:
-        ts = get_ts(d)
-        if ts and now - ts < timedelta(days=7):
-            mythic_signals["active"].append(d)
-
-    # -----------------------------
-    # System signals
-    # -----------------------------
-    system_signals = {
-        "warnings": [],
-        "changes": [],
-    }
-
-    # -----------------------------
-    # Final signal map
-    # -----------------------------
     return {
         "emotional": emotional_signals,
-        "symbolic": symbolic_signals,
-        "mythic": mythic_signals,
-        "system": system_signals,
+        "evolving_tags": evolving_tags,
+        "legacy_fragments_excluded": legacy_type_count,
     }
+
 
 def analyze_signals(user_id: str) -> Dict[str, Any]:
     """
-    State-engine wrapper for compute_signals.
-    Loads fragments from all relevant collections (legacy + current
-    ritual pipeline), buckets them by type, and computes signals.
+    Loads from all real ritual collections (fragments kept for legacy-type
+    counting/transparency, but excluded from the real signal computation).
     """
-    collections_to_scan = [
-        "fragments", "emotional_fragments", "revelations", "thresholds", "clues"
-    ]
+    collections_to_scan = ["fragments", "emotional_fragments", "revelations", "thresholds"]
 
     docs: List[dict] = []
     for coll_name in collections_to_scan:
@@ -174,7 +132,9 @@ def analyze_signals(user_id: str) -> Dict[str, Any]:
 
     buckets: Dict[str, List[dict]] = {}
     for d in docs:
-        t = d.get("type") or d.get("fragment_type") or "unknown"
+        t = (d.get("type") or d.get("fragment_type") or "unknown").lower()
         buckets.setdefault(t, []).append(d)
+
+
 
     return compute_signals(buckets)

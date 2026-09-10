@@ -14,7 +14,7 @@ from backend.engines.frisson_engine import analyze_frisson
 from backend.engines.mirror_engine import analyze_mirror
 from backend.engines.grind_engine import analyze_grind
 from backend.engines.tag_engine import analyze_tags
-from backend.engines.classifier_engine import analyze_classifiers
+
 
 
 
@@ -74,7 +74,7 @@ def get_state(user=Depends(get_current_user_id), limit: int = 200):
         "mirror": analyze_mirror(uid),
         "grind": analyze_grind(uid),
         "tags": analyze_tags(uid),
-        "classifiers": analyze_classifiers(uid),
+
         "emotional_trend": None,  # placeholder, set below
     
     }
